@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          room: Database["public"]["Enums"]["post_audience"]
+          user_id: string
+          voice_url: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          room?: Database["public"]["Enums"]["post_audience"]
+          user_id: string
+          voice_url?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          room?: Database["public"]["Enums"]["post_audience"]
+          user_id?: string
+          voice_url?: string | null
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
@@ -90,6 +117,7 @@ export type Database = {
           audience: Database["public"]["Enums"]["post_audience"]
           content: string | null
           created_at: string
+          expires_at: string | null
           id: string
           media_kind: Database["public"]["Enums"]["media_kind"]
           media_url: string | null
@@ -99,6 +127,7 @@ export type Database = {
           audience?: Database["public"]["Enums"]["post_audience"]
           content?: string | null
           created_at?: string
+          expires_at?: string | null
           id?: string
           media_kind?: Database["public"]["Enums"]["media_kind"]
           media_url?: string | null
@@ -108,6 +137,7 @@ export type Database = {
           audience?: Database["public"]["Enums"]["post_audience"]
           content?: string | null
           created_at?: string
+          expires_at?: string | null
           id?: string
           media_kind?: Database["public"]["Enums"]["media_kind"]
           media_url?: string | null
@@ -139,6 +169,33 @@ export type Database = {
           display_name?: string
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tiktok_reels: {
+        Row: {
+          added_by: string
+          author_handle: string | null
+          created_at: string
+          id: string
+          tiktok_url: string
+          video_id: string
+        }
+        Insert: {
+          added_by: string
+          author_handle?: string | null
+          created_at?: string
+          id?: string
+          tiktok_url: string
+          video_id: string
+        }
+        Update: {
+          added_by?: string
+          author_handle?: string | null
+          created_at?: string
+          id?: string
+          tiktok_url?: string
+          video_id?: string
         }
         Relationships: []
       }
@@ -179,6 +236,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      purge_expired_videos: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "staff" | "troupe" | "admin"
