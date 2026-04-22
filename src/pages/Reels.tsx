@@ -6,7 +6,7 @@ import { TikTokEmbed } from "@/components/TikTokEmbed";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { extractTikTokVideoId } from "@/lib/tiktok";
-import { Plus, Shuffle, Trash2, Lock } from "lucide-react";
+import { Plus, Shuffle, Trash2, Lock, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 type Reel = { id: string; tiktok_url: string; video_id: string; author_handle: string | null };
@@ -18,7 +18,17 @@ export default function Reels() {
   const [shuffle, setShuffle] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
   const [bulk, setBulk] = useState("");
+  const [handles, setHandles] = useState("ndereug\ntheafricandiary\nbantubison\nmelanindominated\nzuluganda\nmbazosafarilodge\nafricanheritagecity");
   const [busy, setBusy] = useState(false);
+
+  const openHandles = () => {
+    const list = handles.split(/[\s,]+/).map(h => h.trim().replace(/^@/, "")).filter(Boolean);
+    if (list.length === 0) { toast.error("Add at least one handle"); return; }
+    list.forEach((h, i) => {
+      setTimeout(() => window.open(`https://www.tiktok.com/@${h}`, "_blank", "noopener"), i * 150);
+    });
+    toast.success(`Opened ${list.length} profile${list.length > 1 ? "s" : ""} — copy video URLs and paste below`);
+  };
 
   const load = async () => {
     const { data } = await supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle").order("created_at", { ascending: false });
@@ -92,8 +102,26 @@ export default function Reels() {
       </div>
 
       {isAdmin && showAdmin && (
-        <div className="glass-strong rounded-3xl p-4 mb-4 space-y-3 animate-fade-in">
-          <p className="text-sm text-muted-foreground">Paste TikTok video URLs — one per line or comma-separated. Each becomes an official embed.</p>
+        <div className="glass-strong rounded-3xl p-4 mb-4 space-y-4 animate-fade-in">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Step 1 · Open profiles</p>
+            <p className="text-xs text-muted-foreground">List handles (one per line, with or without @). Click below to open all TikTok profiles in new tabs.</p>
+            <Textarea
+              className="glass-input min-h-[110px] font-mono text-xs"
+              value={handles}
+              onChange={(e) => setHandles(e.target.value)}
+            />
+            <Button onClick={openHandles} variant="outline" className="w-full rounded-xl gap-2">
+              <ExternalLink className="w-4 h-4" /> Open all profiles
+            </Button>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Step 2 · Paste video URLs</p>
+            <p className="text-xs text-muted-foreground">On each profile, right-click a video → "Copy link". Paste them all here (one per line or comma-separated).</p>
+          </div>
           <Textarea
             className="glass-input min-h-[120px] font-mono text-xs"
             placeholder={"https://www.tiktok.com/@ndereug/video/1234567890\nhttps://www.tiktok.com/@theafricandiary/video/9876543210"}
