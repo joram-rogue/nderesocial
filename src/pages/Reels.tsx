@@ -93,10 +93,17 @@ export default function Reels() {
 
       {isAdmin && showAdmin && (
         <div className="glass-strong rounded-3xl p-4 mb-4 space-y-3 animate-fade-in">
-          <p className="text-sm text-muted-foreground">Paste a TikTok video URL — shows up as an official embed.</p>
-          <div className="flex gap-2">
-            <Input className="glass-input" placeholder="https://www.tiktok.com/@handle/video/..." value={url} onChange={(e) => setUrl(e.target.value)} />
-            <Button onClick={add} className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl">Add</Button>
+          <p className="text-sm text-muted-foreground">Paste TikTok video URLs — one per line or comma-separated. Each becomes an official embed.</p>
+          <Textarea
+            className="glass-input min-h-[120px] font-mono text-xs"
+            placeholder={"https://www.tiktok.com/@ndereug/video/1234567890\nhttps://www.tiktok.com/@theafricandiary/video/9876543210"}
+            value={bulk}
+            onChange={(e) => setBulk(e.target.value)}
+          />
+          <div className="flex justify-end">
+            <Button onClick={addMany} disabled={busy} className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl">
+              {busy ? "Adding..." : "Add all"}
+            </Button>
           </div>
           <div className="space-y-2 pt-2">
             {reels.map((r) => (
