@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Layout } from "@/components/Layout";
 import { TikTokEmbed } from "@/components/TikTokEmbed";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { extractTikTokVideoId } from "@/lib/tiktok";
 import { Plus, Shuffle, Trash2, Lock } from "lucide-react";
 import { toast } from "sonner";
