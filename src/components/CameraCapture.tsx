@@ -68,7 +68,7 @@ export const CameraCapture = ({
     }
   };
 
-  const accept = () => { if (preview) { onCapture(preview.file); onClose(); } };
+  const accept = () => { if (preview) { onCapture(preview.file); /* parent decides next step (e.g. open editor) */ onClose(); } };
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">

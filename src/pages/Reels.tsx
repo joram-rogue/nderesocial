@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { resolveTikTokUrl } from "@/lib/tiktok";
 import { CameraCapture } from "@/components/CameraCapture";
 import { LogoLoader } from "@/components/LogoLoader";
+import { MediaEditor, EditorResult } from "@/components/MediaEditor";
 import {
   Plus, Shuffle, Trash2, Sparkles, Link2, X, Loader2,
   Home, Film, MessageCircle, User, LogOut, Video,
@@ -17,7 +18,7 @@ import logo from "@/assets/ndere-logo.png";
 
 type FeedItem =
   | { kind: "tiktok"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string }
-  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string };
+  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null };
 
 export default function Reels() {
   const { user, role, signOut } = useAuth();
@@ -31,7 +32,8 @@ export default function Reels() {
   const [busy, setBusy] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [pendingCaption, setPendingCaption] = useState<{ file: File; caption: string } | null>(null);
+  const [editing, setEditing] = useState<{ file: File; url: string } | null>(null);
+  const [pendingCaption, setPendingCaption] = useState<{ file: File; caption: string; filterCss: string } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
@@ -39,7 +41,7 @@ export default function Reels() {
   const load = async () => {
     const [tt, ur] = await Promise.all([
       supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by").order("created_at", { ascending: false }),
-      supabase.from("user_reels").select("id,video_url,caption,user_id").order("created_at", { ascending: false }),
+      supabase.from("user_reels").select("id,video_url,caption,user_id,filter_css").order("created_at", { ascending: false }),
     ]);
     const merged: FeedItem[] = [
       ...(ur.data ?? []).map((r) => ({ kind: "user" as const, ...r })),
@@ -109,11 +111,16 @@ export default function Reels() {
     load();
   };
 
-  // Everyone: record + post
+  // Everyone: record → edit → caption → post
   const onCapture = (file: File) => {
     setCameraOpen(false);
-    if (!file.type.startsWith("video")) { toast.error("Record a video"); return; }
-    setPendingCaption({ file, caption: "" });
+    setEditing({ file, url: URL.createObjectURL(file) });
+  };
+
+  const onEditDone = (r: EditorResult) => {
+    if (editing) URL.revokeObjectURL(editing.url);
+    setEditing(null);
+    setPendingCaption({ file: r.file, caption: "", filterCss: r.filterCss });
   };
 
   const publishRecording = async () => {
@@ -127,10 +134,12 @@ export default function Reels() {
       });
       if (upErr) throw upErr;
       const video_url = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+      const isVideo = pendingCaption.file.type.startsWith("video");
       const { error } = await supabase.from("user_reels").insert({
         user_id: user.id,
         video_url,
         caption: pendingCaption.caption.trim() || null,
+        filter_css: isVideo && pendingCaption.filterCss !== "none" ? pendingCaption.filterCss : null,
       });
       if (error) throw error;
       toast.success("Posted to Reels");
@@ -230,6 +239,15 @@ export default function Reels() {
       {/* Camera overlay */}
       {cameraOpen && <CameraCapture onCapture={onCapture} onClose={() => setCameraOpen(false)} />}
 
+      {/* Editor */}
+      {editing && (
+        <MediaEditor
+          source={editing}
+          onCancel={() => { URL.revokeObjectURL(editing.url); setEditing(null); }}
+          onDone={onEditDone}
+        />
+      )}
+
       {/* Caption sheet after recording */}
       {pendingCaption && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
@@ -241,7 +259,11 @@ export default function Reels() {
             </Button>
           </div>
           <div className="flex-1 relative overflow-hidden">
-            <video src={URL.createObjectURL(pendingCaption.file)} className="absolute inset-0 w-full h-full object-contain" controls autoPlay loop />
+            {pendingCaption.file.type.startsWith("video") ? (
+              <video src={URL.createObjectURL(pendingCaption.file)} className="absolute inset-0 w-full h-full object-contain" style={{ filter: pendingCaption.filterCss }} controls autoPlay loop />
+            ) : (
+              <img src={URL.createObjectURL(pendingCaption.file)} alt="" className="absolute inset-0 w-full h-full object-contain" />
+            )}
           </div>
           <div className="p-4 bg-black">
             <Textarea
@@ -281,6 +303,7 @@ export default function Reels() {
                         data-user-reel
                         src={item.video_url}
                         className="w-full h-full object-contain bg-black"
+                        style={{ filter: item.filter_css ?? undefined }}
                         playsInline
                         loop
                         muted={false}
