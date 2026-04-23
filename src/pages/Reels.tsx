@@ -259,7 +259,11 @@ export default function Reels() {
             </Button>
           </div>
           <div className="flex-1 relative overflow-hidden">
-            <video src={URL.createObjectURL(pendingCaption.file)} className="absolute inset-0 w-full h-full object-contain" controls autoPlay loop />
+            {pendingCaption.file.type.startsWith("video") ? (
+              <video src={URL.createObjectURL(pendingCaption.file)} className="absolute inset-0 w-full h-full object-contain" style={{ filter: pendingCaption.filterCss }} controls autoPlay loop />
+            ) : (
+              <img src={URL.createObjectURL(pendingCaption.file)} alt="" className="absolute inset-0 w-full h-full object-contain" />
+            )}
           </div>
           <div className="p-4 bg-black">
             <Textarea
