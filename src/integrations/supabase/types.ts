@@ -199,6 +199,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_reels: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          user_id: string
+          video_url: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          user_id: string
+          video_url: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          user_id?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

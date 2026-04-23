@@ -6,63 +6,73 @@ import { TikTokEmbed } from "@/components/TikTokEmbed";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { resolveTikTokUrl } from "@/lib/tiktok";
+import { CameraCapture } from "@/components/CameraCapture";
+import { LogoLoader } from "@/components/LogoLoader";
 import {
   Plus, Shuffle, Trash2, Sparkles, Link2, X, Loader2,
-  Home, Film, MessageCircle, User, LogOut,
+  Home, Film, MessageCircle, User, LogOut, Video,
 } from "lucide-react";
 import { toast } from "sonner";
-import { LogoLoader } from "@/components/LogoLoader";
 import logo from "@/assets/ndere-logo.png";
 
-type Reel = {
-  id: string;
-  tiktok_url: string;
-  video_id: string;
-  author_handle: string | null;
-  added_by: string;
-};
+type FeedItem =
+  | { kind: "tiktok"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string }
+  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string };
 
 export default function Reels() {
   const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
   const isAdmin = role === "admin";
-  const [reels, setReels] = useState<Reel[]>([]);
+
+  const [items, setItems] = useState<FeedItem[]>([]);
   const [shuffle, setShuffle] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
   const [bulk, setBulk] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [pendingCaption, setPendingCaption] = useState<{ file: File; caption: string } | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
 
   const load = async () => {
-    const { data } = await supabase
-      .from("tiktok_reels")
-      .select("id,tiktok_url,video_id,author_handle,added_by")
-      .order("created_at", { ascending: false });
-    setReels(data ?? []);
+    const [tt, ur] = await Promise.all([
+      supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by").order("created_at", { ascending: false }),
+      supabase.from("user_reels").select("id,video_url,caption,user_id").order("created_at", { ascending: false }),
+    ]);
+    const merged: FeedItem[] = [
+      ...(ur.data ?? []).map((r) => ({ kind: "user" as const, ...r })),
+      ...(tt.data ?? []).map((r) => ({ kind: "tiktok" as const, ...r })),
+    ];
+    setItems(merged);
   };
   useEffect(() => { load(); }, []);
 
   const shuffled = useMemo(() => {
-    const arr = [...reels];
+    const arr = [...items];
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reels, shuffle]);
+  }, [items, shuffle]);
 
-  // Track which slide is in view
+  // Track which slide is in view; pause off-screen videos
   useEffect(() => {
     if (!containerRef.current || shuffled.length === 0) return;
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
+          const el = e.target as HTMLElement;
+          const idx = Number(el.dataset.idx);
+          const vid = el.querySelector("video[data-user-reel]") as HTMLVideoElement | null;
           if (e.isIntersecting && e.intersectionRatio > 0.6) {
-            const idx = Number((e.target as HTMLElement).dataset.idx);
             if (!Number.isNaN(idx)) setActiveIdx(idx);
+            vid?.play().catch(() => {});
+          } else {
+            vid?.pause();
           }
         });
       },
@@ -72,11 +82,11 @@ export default function Reels() {
     return () => obs.disconnect();
   }, [shuffled]);
 
+  // Admin: paste TikTok links
   const addMany = async () => {
-    if (!user) { toast.error("Sign in to share reels"); return; }
+    if (!user) { toast.error("Sign in"); return; }
     const tokens = bulk.split(/[\s,]+/).map((t) => t.trim()).filter(Boolean);
-    if (tokens.length === 0) { toast.error("Paste a TikTok link"); return; }
-
+    if (tokens.length === 0) { toast.error("Paste a link"); return; }
     setBusy(true);
     const rows: { tiktok_url: string; video_id: string; author_handle: string | null; added_by: string }[] = [];
     const skipped: string[] = [];
@@ -87,7 +97,7 @@ export default function Reels() {
     }
     if (rows.length === 0) {
       setBusy(false);
-      toast.error("Couldn't read those links. Use TikTok's Share → Copy link.");
+      toast.error("Couldn't read those links.");
       return;
     }
     const { error } = await supabase.from("tiktok_reels").insert(rows);
@@ -99,14 +109,52 @@ export default function Reels() {
     load();
   };
 
-  const remove = async (id: string) => {
+  // Everyone: record + post
+  const onCapture = (file: File) => {
+    setCameraOpen(false);
+    if (!file.type.startsWith("video")) { toast.error("Record a video"); return; }
+    setPendingCaption({ file, caption: "" });
+  };
+
+  const publishRecording = async () => {
+    if (!user || !pendingCaption) return;
+    setBusy(true);
+    try {
+      const ext = pendingCaption.file.name.split(".").pop() || "webm";
+      const path = `${user.id}/reel-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("media").upload(path, pendingCaption.file, {
+        contentType: pendingCaption.file.type,
+      });
+      if (upErr) throw upErr;
+      const video_url = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+      const { error } = await supabase.from("user_reels").insert({
+        user_id: user.id,
+        video_url,
+        caption: pendingCaption.caption.trim() || null,
+      });
+      if (error) throw error;
+      toast.success("Posted to Reels");
+      setPendingCaption(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to post");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (item: FeedItem) => {
     if (!confirm("Remove this reel?")) return;
-    const { error } = await supabase.from("tiktok_reels").delete().eq("id", id);
+    const table = item.kind === "tiktok" ? "tiktok_reels" : "user_reels";
+    const { error } = await supabase.from(table).delete().eq("id", item.id);
     if (error) { toast.error(error.message); return; }
     load();
   };
 
-  const canDelete = (r: Reel) => isAdmin || r.added_by === user?.id;
+  const canDelete = (item: FeedItem) => {
+    if (isAdmin) return true;
+    return item.kind === "tiktok" ? item.added_by === user?.id : item.user_id === user?.id;
+  };
 
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
@@ -126,13 +174,16 @@ export default function Reels() {
             >
               <Shuffle className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => setComposerOpen((s) => !s)}
-              className="px-3 py-2 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-xs flex items-center gap-1.5 shadow-[var(--shadow-warm)] hover:scale-105 transition-transform"
-              aria-label="Share a reel"
-            >
-              {composerOpen ? <X className="w-3.5 h-3.5" /> : <><Plus className="w-3.5 h-3.5" /> Share</>}
-            </button>
+            {/* Admin-only TikTok paste */}
+            {isAdmin && (
+              <button
+                onClick={() => setComposerOpen((s) => !s)}
+                className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
+                aria-label="Paste TikTok"
+              >
+                {composerOpen ? <X className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+              </button>
+            )}
             {user && (
               <button
                 onClick={async () => { await signOut(); navigate("/auth"); }}
@@ -146,83 +197,122 @@ export default function Reels() {
         </div>
       </header>
 
-      {/* Composer overlay */}
-      {composerOpen && (
+      {/* Floating Record FAB — everyone */}
+      {user && !cameraOpen && !pendingCaption && (
+        <button
+          onClick={() => setCameraOpen(true)}
+          className="fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[var(--shadow-warm)] hover:scale-110 transition-transform"
+          aria-label="Record reel"
+        >
+          <Video className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Admin composer overlay */}
+      {composerOpen && isAdmin && (
         <div className="absolute inset-0 z-40 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setComposerOpen(false)}>
-          <div
-            className="w-full sm:max-w-md bg-card text-foreground rounded-t-3xl sm:rounded-3xl p-5 space-y-3 animate-fade-in border border-white/10"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="w-full sm:max-w-md bg-card text-foreground rounded-t-3xl sm:rounded-3xl p-5 space-y-3 animate-fade-in border border-white/10" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <Link2 className="w-4 h-4 text-primary" />
-              Share a TikTok
+              <Link2 className="w-4 h-4 text-primary" /> Curate a TikTok
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Tap <span className="text-foreground font-medium">Share → Copy link</span> on TikTok, then paste here. Short links work too.
-            </p>
-            <Textarea
-              className="glass-input min-h-[110px] font-mono text-xs"
-              placeholder={"https://vm.tiktok.com/ZMabc123/"}
-              value={bulk}
-              onChange={(e) => setBulk(e.target.value)}
-            />
+            <p className="text-xs text-muted-foreground">Paste TikTok share links — one per line.</p>
+            <Textarea className="glass-input min-h-[110px] font-mono text-xs" placeholder="https://vm.tiktok.com/…" value={bulk} onChange={(e) => setBulk(e.target.value)} />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => { setComposerOpen(false); setBulk(""); }} className="rounded-xl">Cancel</Button>
-              <Button
-                onClick={addMany}
-                disabled={busy || !bulk.trim()}
-                className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl gap-2"
-              >
-                {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Resolving…</> : <>Share <Sparkles className="w-3.5 h-3.5" /></>}
+              <Button onClick={addMany} disabled={busy || !bulk.trim()} className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl gap-2">
+                {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding…</> : "Add"}
               </Button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Camera overlay */}
+      {cameraOpen && <CameraCapture onCapture={onCapture} onClose={() => setCameraOpen(false)} />}
+
+      {/* Caption sheet after recording */}
+      {pendingCaption && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          <div className="flex items-center justify-between p-4">
+            <button onClick={() => setPendingCaption(null)} className="p-2 rounded-full bg-white/10"><X className="w-5 h-5" /></button>
+            <span className="text-sm font-semibold">New reel</span>
+            <Button onClick={publishRecording} disabled={busy} className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-full px-5 gap-2">
+              {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Posting…</> : "Post"}
+            </Button>
+          </div>
+          <div className="flex-1 relative overflow-hidden">
+            <video src={URL.createObjectURL(pendingCaption.file)} className="absolute inset-0 w-full h-full object-contain" controls autoPlay loop />
+          </div>
+          <div className="p-4 bg-black">
+            <Textarea
+              value={pendingCaption.caption}
+              onChange={(e) => setPendingCaption({ ...pendingCaption, caption: e.target.value })}
+              placeholder="Add a caption (optional)…"
+              maxLength={280}
+              className="glass-input min-h-[60px] text-sm"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Vertical snap feed */}
       {shuffled.length === 0 ? (
-        <div className="h-full flex items-center justify-center px-8">
-          <div className="text-center text-white/70 text-sm animate-fade-in">
-            <Sparkles className="w-7 h-7 mx-auto mb-3 text-accent animate-pulse" />
-            No reels yet. Tap <Plus className="inline w-3.5 h-3.5 mx-1" /> to share the first one.
+        <div className="h-full flex flex-col items-center justify-center px-8 gap-4">
+          <LogoLoader size={48} />
+          <div className="text-center text-white/70 text-sm">
+            No reels yet. Tap the <Video className="inline w-3.5 h-3.5 mx-1" /> button to record one.
           </div>
         </div>
       ) : (
-        <div
-          ref={containerRef}
-          className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar"
-        >
-          {shuffled.map((r, i) => {
-            const visible = Math.abs(i - activeIdx) <= 1; // virtualize
+        <div ref={containerRef} className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar">
+          {shuffled.map((item, i) => {
+            const visible = Math.abs(i - activeIdx) <= 1;
             return (
               <section
-                key={r.id}
+                key={`${item.kind}-${item.id}`}
                 data-idx={i}
                 ref={(el) => { slideRefs.current[i] = el; }}
                 className="h-[100dvh] w-full snap-start snap-always relative flex items-center justify-center"
               >
                 {visible ? (
-                  <div className="relative w-full max-w-[420px] h-full flex items-center justify-center px-2 animate-fade-in">
-                    <div className="w-full">
-                      <TikTokEmbed videoId={r.video_id} handle={r.author_handle} />
-                    </div>
+                  <div className="relative w-full max-w-[460px] h-full flex items-center justify-center px-2 animate-fade-in">
+                    {item.kind === "user" ? (
+                      <video
+                        data-user-reel
+                        src={item.video_url}
+                        className="w-full h-full object-contain bg-black"
+                        playsInline
+                        loop
+                        muted={false}
+                        controls={false}
+                        onClick={(e) => {
+                          const v = e.currentTarget;
+                          v.paused ? v.play() : v.pause();
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full">
+                        <TikTokEmbed videoId={item.video_id} handle={item.author_handle} />
+                      </div>
+                    )}
 
                     {/* Right action rail */}
                     <div className="absolute right-3 bottom-28 flex flex-col items-center gap-4 z-10">
-                      <a
-                        href={r.tiktok_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-transform hover:scale-110"
-                        aria-label="Open on TikTok"
-                      >
-                        <Film className="w-5 h-5" />
-                      </a>
-                      {canDelete(r) && (
+                      {item.kind === "tiktok" && (
+                        <a
+                          href={item.tiktok_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
+                          aria-label="Open on TikTok"
+                        >
+                          <Film className="w-5 h-5" />
+                        </a>
+                      )}
+                      {canDelete(item) && (
                         <button
-                          onClick={() => remove(r.id)}
-                          className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-destructive/30 transition-transform hover:scale-110"
+                          onClick={() => remove(item)}
+                          className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-destructive/30"
                           aria-label="Remove"
                         >
                           <Trash2 className="w-5 h-5" />
@@ -233,9 +323,13 @@ export default function Reels() {
                     {/* Bottom caption */}
                     <div className="absolute left-4 right-20 bottom-28 z-10 pointer-events-none">
                       <div className="text-sm font-semibold drop-shadow-lg">
-                        @{r.author_handle ?? "tiktok"}
+                        {item.kind === "tiktok"
+                          ? `@${item.author_handle ?? "tiktok"}`
+                          : "Ndere FAM"}
                       </div>
-                      <div className="text-[11px] text-white/70 drop-shadow">Shared on Ndere FAM</div>
+                      {item.kind === "user" && item.caption && (
+                        <div className="text-[12px] text-white/85 drop-shadow line-clamp-2 mt-0.5">{item.caption}</div>
+                      )}
                     </div>
                   </div>
                 ) : (
