@@ -128,10 +128,10 @@ export default function Reels() {
             </button>
             <button
               onClick={() => setComposerOpen((s) => !s)}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-transform hover:scale-110"
-              aria-label="Add"
+              className="px-3 py-2 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-xs flex items-center gap-1.5 shadow-[var(--shadow-warm)] hover:scale-105 transition-transform"
+              aria-label="Share a reel"
             >
-              {composerOpen ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {composerOpen ? <X className="w-3.5 h-3.5" /> : <><Plus className="w-3.5 h-3.5" /> Share</>}
             </button>
             {user && (
               <button
