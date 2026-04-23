@@ -32,7 +32,8 @@ export default function Reels() {
   const [busy, setBusy] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [pendingCaption, setPendingCaption] = useState<{ file: File; caption: string } | null>(null);
+  const [editing, setEditing] = useState<{ file: File; url: string } | null>(null);
+  const [pendingCaption, setPendingCaption] = useState<{ file: File; caption: string; filterCss: string } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
