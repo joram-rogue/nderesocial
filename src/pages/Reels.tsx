@@ -111,11 +111,16 @@ export default function Reels() {
     load();
   };
 
-  // Everyone: record + post
+  // Everyone: record → edit → caption → post
   const onCapture = (file: File) => {
     setCameraOpen(false);
-    if (!file.type.startsWith("video")) { toast.error("Record a video"); return; }
-    setPendingCaption({ file, caption: "" });
+    setEditing({ file, url: URL.createObjectURL(file) });
+  };
+
+  const onEditDone = (r: EditorResult) => {
+    if (editing) URL.revokeObjectURL(editing.url);
+    setEditing(null);
+    setPendingCaption({ file: r.file, caption: "", filterCss: r.filterCss });
   };
 
   const publishRecording = async () => {
@@ -129,10 +134,12 @@ export default function Reels() {
       });
       if (upErr) throw upErr;
       const video_url = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+      const isVideo = pendingCaption.file.type.startsWith("video");
       const { error } = await supabase.from("user_reels").insert({
         user_id: user.id,
         video_url,
         caption: pendingCaption.caption.trim() || null,
+        filter_css: isVideo && pendingCaption.filterCss !== "none" ? pendingCaption.filterCss : null,
       });
       if (error) throw error;
       toast.success("Posted to Reels");
