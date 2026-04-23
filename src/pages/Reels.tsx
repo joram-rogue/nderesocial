@@ -11,6 +11,7 @@ import {
   Home, Film, MessageCircle, User, LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
+import { LogoLoader } from "@/components/LogoLoader";
 import logo from "@/assets/ndere-logo.png";
 
 type Reel = {
