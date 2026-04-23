@@ -239,6 +239,15 @@ export default function Reels() {
       {/* Camera overlay */}
       {cameraOpen && <CameraCapture onCapture={onCapture} onClose={() => setCameraOpen(false)} />}
 
+      {/* Editor */}
+      {editing && (
+        <MediaEditor
+          source={editing}
+          onCancel={() => { URL.revokeObjectURL(editing.url); setEditing(null); }}
+          onDone={onEditDone}
+        />
+      )}
+
       {/* Caption sheet after recording */}
       {pendingCaption && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
