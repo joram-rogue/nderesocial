@@ -238,7 +238,7 @@ export default function Reels() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-white/30 text-xs">Loading…</div>
+                  <div className="flex items-center justify-center"><LogoLoader size={48} /></div>
                 )}
               </section>
             );
