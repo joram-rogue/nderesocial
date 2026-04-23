@@ -32,7 +32,7 @@ export default function Reels() {
   const [busy, setBusy] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const slideRefs = useRef<(HTMLElement | null)[]>([]);
 
   const load = async () => {
     const { data } = await supabase
