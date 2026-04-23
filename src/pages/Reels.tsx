@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { resolveTikTokUrl } from "@/lib/tiktok";
 import { CameraCapture } from "@/components/CameraCapture";
 import { LogoLoader } from "@/components/LogoLoader";
+import { MediaEditor, EditorResult } from "@/components/MediaEditor";
 import {
   Plus, Shuffle, Trash2, Sparkles, Link2, X, Loader2,
   Home, Film, MessageCircle, User, LogOut, Video,
@@ -17,7 +18,7 @@ import logo from "@/assets/ndere-logo.png";
 
 type FeedItem =
   | { kind: "tiktok"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string }
-  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string };
+  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null };
 
 export default function Reels() {
   const { user, role, signOut } = useAuth();
