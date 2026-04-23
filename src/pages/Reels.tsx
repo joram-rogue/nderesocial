@@ -303,6 +303,7 @@ export default function Reels() {
                         data-user-reel
                         src={item.video_url}
                         className="w-full h-full object-contain bg-black"
+                        style={{ filter: item.filter_css ?? undefined }}
                         playsInline
                         loop
                         muted={false}
