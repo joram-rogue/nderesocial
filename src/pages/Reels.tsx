@@ -198,7 +198,7 @@ export default function Reels() {
               <section
                 key={r.id}
                 data-idx={i}
-                ref={(el) => (slideRefs.current[i] = el)}
+                ref={(el) => { slideRefs.current[i] = el; }}
                 className="h-[100dvh] w-full snap-start snap-always relative flex items-center justify-center"
               >
                 {visible ? (
