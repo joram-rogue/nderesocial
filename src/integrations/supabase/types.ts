@@ -203,6 +203,7 @@ export type Database = {
         Row: {
           caption: string | null
           created_at: string
+          filter_css: string | null
           id: string
           user_id: string
           video_url: string
@@ -210,6 +211,7 @@ export type Database = {
         Insert: {
           caption?: string | null
           created_at?: string
+          filter_css?: string | null
           id?: string
           user_id: string
           video_url: string
@@ -217,6 +219,7 @@ export type Database = {
         Update: {
           caption?: string | null
           created_at?: string
+          filter_css?: string | null
           id?: string
           user_id?: string
           video_url?: string
