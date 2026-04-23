@@ -40,7 +40,7 @@ export default function Reels() {
   const load = async () => {
     const [tt, ur] = await Promise.all([
       supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by").order("created_at", { ascending: false }),
-      supabase.from("user_reels").select("id,video_url,caption,user_id").order("created_at", { ascending: false }),
+      supabase.from("user_reels").select("id,video_url,caption,user_id,filter_css").order("created_at", { ascending: false }),
     ]);
     const merged: FeedItem[] = [
       ...(ur.data ?? []).map((r) => ({ kind: "user" as const, ...r })),
