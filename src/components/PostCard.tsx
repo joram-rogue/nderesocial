@@ -20,8 +20,21 @@ export type Post = {
 
 type Comment = {
   id: string; user_id: string; content: string; parent_id: string | null; created_at: string;
-  profile?: { display_name: string };
+  profile?: { display_name: string; avatar_url: string | null };
 };
+
+const Avatar = ({ url, name, size = 40 }: { url?: string | null; name?: string | null; size?: number }) => (
+  <div
+    className="rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-display font-bold"
+    style={{ width: size, height: size, fontSize: size * 0.42 }}
+  >
+    {url ? (
+      <img src={url} alt="" className="w-full h-full object-cover" />
+    ) : (
+      <span>{name?.[0]?.toUpperCase() ?? "U"}</span>
+    )}
+  </div>
+);
 
 const timeAgo = (iso: string) => {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
