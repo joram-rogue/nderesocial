@@ -83,6 +83,33 @@ export type Database = {
           },
         ]
       }
+      direct_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          recipient_id: string
+          sender_id: string
+          voice_url: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          recipient_id: string
+          sender_id: string
+          voice_url?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+          voice_url?: string | null
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
