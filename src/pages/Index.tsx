@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Layout } from "@/components/Layout";
-import { PostComposer } from "@/components/PostComposer";
 import { PostCard, type Post } from "@/components/PostCard";
 import { fetchPostsWithProfiles } from "@/lib/posts";
 
@@ -25,17 +24,14 @@ export default function Index() {
 
   return (
     <Layout>
-      <div className="space-y-4">
-        <PostComposer onPosted={load} />
-        <div className="glass-strong rounded-3xl overflow-hidden">
-          {busy && posts.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground text-sm">Loading…</div>
-          ) : posts.length === 0 ? (
-            <div className="p-10 text-center text-muted-foreground">No posts yet. Be the first.</div>
-          ) : (
-            posts.map((p) => <PostCard key={p.id} post={p} onChange={load} />)
-          )}
-        </div>
+      <div className="-mx-4">
+        {busy && posts.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground text-sm">Loading…</div>
+        ) : posts.length === 0 ? (
+          <div className="p-10 text-center text-muted-foreground">No posts yet. Tap + to share.</div>
+        ) : (
+          posts.map((p) => <PostCard key={p.id} post={p} onChange={load} />)
+        )}
       </div>
     </Layout>
   );
