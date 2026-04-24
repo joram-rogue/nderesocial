@@ -121,9 +121,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
     <article className="glass-strong rounded-3xl p-5 animate-fade-in">
       <header className="flex items-center justify-between mb-3">
         <Link to={`/u/${post.user_id}`} className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-display font-bold">
-            {post.profile?.display_name?.[0]?.toUpperCase() ?? "U"}
-          </div>
+          <Avatar url={post.profile?.avatar_url} name={post.profile?.display_name} size={40} />
           <div>
             <p className="font-semibold text-sm group-hover:text-primary transition-colors">{post.profile?.display_name ?? "User"}</p>
             <p className="text-xs text-muted-foreground">{timeAgo(post.created_at)} · {post.audience === "all" ? "Everyone" : post.audience}</p>
