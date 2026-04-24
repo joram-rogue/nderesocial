@@ -67,7 +67,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
     const { data } = await supabase.from("comments").select("*").eq("post_id", post.id).order("created_at", { ascending: true });
     if (!data) return;
     const ids = [...new Set(data.map((c) => c.user_id))];
-    const { data: profs } = await supabase.from("profiles").select("id,display_name").in("id", ids);
+    const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url").in("id", ids);
     const m = new Map(profs?.map((p) => [p.id, p]));
     setComments(data.map((c) => ({ ...c, profile: m.get(c.user_id) as any })) as Comment[]);
   };
