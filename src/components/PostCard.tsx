@@ -20,8 +20,21 @@ export type Post = {
 
 type Comment = {
   id: string; user_id: string; content: string; parent_id: string | null; created_at: string;
-  profile?: { display_name: string };
+  profile?: { display_name: string; avatar_url: string | null };
 };
+
+const Avatar = ({ url, name, size = 40 }: { url?: string | null; name?: string | null; size?: number }) => (
+  <div
+    className="rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-display font-bold"
+    style={{ width: size, height: size, fontSize: size * 0.42 }}
+  >
+    {url ? (
+      <img src={url} alt="" className="w-full h-full object-cover" />
+    ) : (
+      <span>{name?.[0]?.toUpperCase() ?? "U"}</span>
+    )}
+  </div>
+);
 
 const timeAgo = (iso: string) => {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -54,7 +67,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
     const { data } = await supabase.from("comments").select("*").eq("post_id", post.id).order("created_at", { ascending: true });
     if (!data) return;
     const ids = [...new Set(data.map((c) => c.user_id))];
-    const { data: profs } = await supabase.from("profiles").select("id,display_name").in("id", ids);
+    const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url").in("id", ids);
     const m = new Map(profs?.map((p) => [p.id, p]));
     setComments(data.map((c) => ({ ...c, profile: m.get(c.user_id) as any })) as Comment[]);
   };
@@ -108,9 +121,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
     <article className="glass-strong rounded-3xl p-5 animate-fade-in">
       <header className="flex items-center justify-between mb-3">
         <Link to={`/u/${post.user_id}`} className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-display font-bold">
-            {post.profile?.display_name?.[0]?.toUpperCase() ?? "U"}
-          </div>
+          <Avatar url={post.profile?.avatar_url} name={post.profile?.display_name} size={40} />
           <div>
             <p className="font-semibold text-sm group-hover:text-primary transition-colors">{post.profile?.display_name ?? "User"}</p>
             <p className="text-xs text-muted-foreground">{timeAgo(post.created_at)} · {post.audience === "all" ? "Everyone" : post.audience}</p>
@@ -162,9 +173,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
           {topComments.map((c) => (
             <div key={c.id} className="space-y-2">
               <div className="flex gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-secondary grid place-items-center text-xs font-bold shrink-0">
-                  {c.profile?.display_name?.[0]?.toUpperCase() ?? "U"}
-                </div>
+                <Avatar url={c.profile?.avatar_url} name={c.profile?.display_name} size={32} />
                 <div className="flex-1 min-w-0">
                   <div className="glass rounded-2xl px-3.5 py-2">
                     <p className="text-xs font-semibold text-accent">{c.profile?.display_name ?? "User"}</p>
@@ -178,9 +187,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
 
               {repliesOf(c.id).map((r) => (
                 <div key={r.id} className="flex gap-2.5 pl-10">
-                  <div className="w-7 h-7 rounded-full bg-secondary grid place-items-center text-[10px] font-bold shrink-0">
-                    {r.profile?.display_name?.[0]?.toUpperCase() ?? "U"}
-                  </div>
+                  <Avatar url={r.profile?.avatar_url} name={r.profile?.display_name} size={28} />
                   <div className="glass rounded-2xl px-3 py-1.5 flex-1 min-w-0">
                     <p className="text-xs font-semibold text-accent">{r.profile?.display_name ?? "User"}</p>
                     <p className="text-sm break-words">{r.content}</p>
