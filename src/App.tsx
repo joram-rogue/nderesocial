@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import Reels from "./pages/Reels";
 import Chat from "./pages/Chat";
+import Compose from "./pages/Compose";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reels" element={<Reels />} />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/compose" element={<Compose />} />
             <Route path="/account" element={<Account />} />
             <Route path="/u/:id" element={<Account />} />
             <Route path="*" element={<NotFound />} />
