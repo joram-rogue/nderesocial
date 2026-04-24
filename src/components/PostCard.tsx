@@ -118,95 +118,105 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
   const repliesOf = (id: string) => comments.filter((c) => c.parent_id === id);
 
   return (
-    <article className="glass-strong rounded-3xl p-5 animate-fade-in">
-      <header className="flex items-center justify-between mb-3">
-        <Link to={`/u/${post.user_id}`} className="flex items-center gap-3 group">
+    <article className="px-4 py-3 border-b border-border/40 hover:bg-white/[0.015] transition-colors animate-fade-in">
+      <div className="flex gap-3">
+        <Link to={`/u/${post.user_id}`} className="shrink-0">
           <Avatar url={post.profile?.avatar_url} name={post.profile?.display_name} size={40} />
-          <div>
-            <p className="font-semibold text-sm group-hover:text-primary transition-colors">{post.profile?.display_name ?? "User"}</p>
-            <p className="text-xs text-muted-foreground">{timeAgo(post.created_at)} · {post.audience === "all" ? "Everyone" : post.audience}</p>
-          </div>
         </Link>
-        {user?.id === post.user_id && (
-          <button onClick={remove} className="p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </header>
 
-      {post.content && <p className="text-[15px] leading-relaxed mb-3 whitespace-pre-wrap">{post.content}</p>}
+        <div className="flex-1 min-w-0">
+          <header className="flex items-center justify-between gap-2 mb-0.5">
+            <Link to={`/u/${post.user_id}`} className="flex items-center gap-1.5 min-w-0 group">
+              <span className="font-semibold text-[15px] truncate group-hover:underline">{post.profile?.display_name ?? "User"}</span>
+              <span className="text-muted-foreground text-sm shrink-0">· {timeAgo(post.created_at)}</span>
+              {post.audience !== "all" && (
+                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">
+                  {post.audience}
+                </span>
+              )}
+            </Link>
+            {user?.id === post.user_id && (
+              <button onClick={remove} className="p-1.5 -mr-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </header>
 
-      {post.media_url && (
-        <div className="relative rounded-2xl overflow-hidden border border-white/10 mb-3">
-          {post.media_kind === "video" ? (
-            <video src={post.media_url} controls className="w-full max-h-[600px] object-contain bg-black" />
-          ) : (
-            <img src={post.media_url} alt="" className="w-full max-h-[600px] object-contain bg-black" />
+          {post.content && <p className="text-[15px] leading-snug whitespace-pre-wrap break-words mb-2">{post.content}</p>}
+
+          {post.media_url && (
+            <div className="relative rounded-2xl overflow-hidden border border-border/40 mb-2">
+              {post.media_kind === "video" ? (
+                <video src={post.media_url} controls className="w-full max-h-[520px] object-contain bg-black" />
+              ) : (
+                <img src={post.media_url} alt="" className="w-full max-h-[520px] object-contain bg-black" />
+              )}
+              <Watermark />
+            </div>
           )}
-          <Watermark />
-        </div>
-      )}
 
-      <div className="flex items-center gap-1 -mx-1">
-        <button onClick={toggleLike} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors ${liked ? "text-primary" : "text-muted-foreground"}`}>
-          <Heart className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
-          <span className="text-sm font-medium">{likes}</span>
-        </button>
-        <button onClick={() => setShowComments((s) => !s)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors text-muted-foreground">
-          <MessageCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">{comments.length || ""}</span>
-        </button>
-        <button onClick={handleDownload} className="flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors text-muted-foreground ml-auto">
-          <Download className="w-5 h-5" />
-        </button>
-      </div>
-
-      {showComments && (
-        <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
-          <div className="flex gap-2">
-            <input value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment(newComment)}
-              placeholder="Write a comment…" maxLength={300}
-              className="flex-1 glass-input rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
-            <button onClick={() => addComment(newComment)} className="p-2.5 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary"><Send className="w-4 h-4" /></button>
+          <div className="flex items-center justify-between max-w-[360px] -ml-2 text-muted-foreground">
+            <button onClick={() => setShowComments((s) => !s)} className="group flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
+              <MessageCircle className="w-[18px] h-[18px]" />
+              <span className="text-xs font-medium">{comments.length || ""}</span>
+            </button>
+            <button onClick={toggleLike} className={`group flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-destructive/10 transition-colors ${liked ? "text-destructive" : "hover:text-destructive"}`}>
+              <Heart className={`w-[18px] h-[18px] ${liked ? "fill-current" : ""}`} />
+              <span className="text-xs font-medium">{likes || ""}</span>
+            </button>
+            <button onClick={handleDownload} className="group flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-accent/10 hover:text-accent transition-colors">
+              <Download className="w-[18px] h-[18px]" />
+            </button>
           </div>
 
-          {topComments.map((c) => (
-            <div key={c.id} className="space-y-2">
-              <div className="flex gap-2.5">
-                <Avatar url={c.profile?.avatar_url} name={c.profile?.display_name} size={32} />
-                <div className="flex-1 min-w-0">
-                  <div className="glass rounded-2xl px-3.5 py-2">
-                    <p className="text-xs font-semibold text-accent">{c.profile?.display_name ?? "User"}</p>
-                    <p className="text-sm break-words">{c.content}</p>
-                  </div>
-                  <button onClick={() => setReplyTo(replyTo === c.id ? null : c.id)} className="text-xs text-muted-foreground hover:text-primary mt-1 ml-3 inline-flex items-center gap-1">
-                    <Reply className="w-3 h-3" /> Reply
-                  </button>
-                </div>
+          {showComments && (
+            <div className="mt-3 pt-3 border-t border-border/30 space-y-3">
+              <div className="flex gap-2">
+                <input value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment(newComment)}
+                  placeholder="Write a comment…" maxLength={300}
+                  className="flex-1 glass-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+                <button onClick={() => addComment(newComment)} className="p-2 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary"><Send className="w-4 h-4" /></button>
               </div>
 
-              {repliesOf(c.id).map((r) => (
-                <div key={r.id} className="flex gap-2.5 pl-10">
-                  <Avatar url={r.profile?.avatar_url} name={r.profile?.display_name} size={28} />
-                  <div className="glass rounded-2xl px-3 py-1.5 flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-accent">{r.profile?.display_name ?? "User"}</p>
-                    <p className="text-sm break-words">{r.content}</p>
+              {topComments.map((c) => (
+                <div key={c.id} className="space-y-2">
+                  <div className="flex gap-2.5">
+                    <Avatar url={c.profile?.avatar_url} name={c.profile?.display_name} size={28} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm">
+                        <span className="font-semibold mr-1.5">{c.profile?.display_name ?? "User"}</span>
+                        <span className="break-words">{c.content}</span>
+                      </div>
+                      <button onClick={() => setReplyTo(replyTo === c.id ? null : c.id)} className="text-[11px] text-muted-foreground hover:text-primary mt-0.5 inline-flex items-center gap-1">
+                        <Reply className="w-3 h-3" /> Reply
+                      </button>
+                    </div>
                   </div>
+
+                  {repliesOf(c.id).map((r) => (
+                    <div key={r.id} className="flex gap-2 pl-9">
+                      <Avatar url={r.profile?.avatar_url} name={r.profile?.display_name} size={24} />
+                      <div className="text-sm flex-1 min-w-0">
+                        <span className="font-semibold mr-1.5">{r.profile?.display_name ?? "User"}</span>
+                        <span className="break-words">{r.content}</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {replyTo === c.id && (
+                    <div className="flex gap-2 pl-9">
+                      <input value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment(replyText, c.id)}
+                        placeholder="Write a reply…" autoFocus maxLength={300}
+                        className="flex-1 glass-input rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+                      <button onClick={() => addComment(replyText, c.id)} className="p-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary"><Send className="w-3.5 h-3.5" /></button>
+                    </div>
+                  )}
                 </div>
               ))}
-
-              {replyTo === c.id && (
-                <div className="flex gap-2 pl-10">
-                  <input value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment(replyText, c.id)}
-                    placeholder="Write a reply…" autoFocus maxLength={300}
-                    className="flex-1 glass-input rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
-                  <button onClick={() => addComment(replyText, c.id)} className="p-2 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary"><Send className="w-4 h-4" /></button>
-                </div>
-              )}
             </div>
-          ))}
+          )}
         </div>
-      )}
+      </div>
     </article>
   );
 };
