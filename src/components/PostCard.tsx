@@ -187,9 +187,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
 
               {repliesOf(c.id).map((r) => (
                 <div key={r.id} className="flex gap-2.5 pl-10">
-                  <div className="w-7 h-7 rounded-full bg-secondary grid place-items-center text-[10px] font-bold shrink-0">
-                    {r.profile?.display_name?.[0]?.toUpperCase() ?? "U"}
-                  </div>
+                  <Avatar url={r.profile?.avatar_url} name={r.profile?.display_name} size={28} />
                   <div className="glass rounded-2xl px-3 py-1.5 flex-1 min-w-0">
                     <p className="text-xs font-semibold text-accent">{r.profile?.display_name ?? "User"}</p>
                     <p className="text-sm break-words">{r.content}</p>
