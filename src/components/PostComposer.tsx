@@ -10,7 +10,17 @@ import { CameraCapture } from "./CameraCapture";
 type Audience = "all" | "staff" | "troupe";
 
 export const PostComposer = ({ onPosted }: { onPosted: () => void }) => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  // Audience options based on role:
+  // - troupe members: can post to Everyone or Troupe-only
+  // - staff: can post to Everyone or Staff-only
+  // - admin: can post anywhere
+  // - everyone else: Everyone only
+  const audienceOptions: Audience[] =
+    role === "admin" ? ["all", "staff", "troupe"]
+    : role === "troupe" ? ["all", "troupe"]
+    : role === "staff" ? ["all", "staff"]
+    : ["all"];
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -107,10 +117,11 @@ export const PostComposer = ({ onPosted }: { onPosted: () => void }) => {
           </div>
           <div className="flex items-center gap-2">
             <select value={audience} onChange={(e) => setAudience(e.target.value as Audience)}
-              className="glass-input rounded-xl px-3 py-2 text-sm capitalize cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/40">
-              <option value="all">Everyone</option>
-              <option value="staff">Staff only</option>
-              <option value="troupe">Troupe only</option>
+              disabled={audienceOptions.length === 1}
+              className="glass-input rounded-xl px-3 py-2 text-sm capitalize cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
+              {audienceOptions.includes("all") && <option value="all">Everyone</option>}
+              {audienceOptions.includes("staff") && <option value="staff">Staff only</option>}
+              {audienceOptions.includes("troupe") && <option value="troupe">Troupe only</option>}
             </select>
             <Button onClick={submit} disabled={busy} className="bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold rounded-xl px-5 shadow-[var(--shadow-warm)]">
               <Send className="w-4 h-4 mr-1.5" /> Post

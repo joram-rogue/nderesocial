@@ -27,13 +27,15 @@ export default function Index() {
     <Layout>
       <div className="space-y-4">
         <PostComposer onPosted={load} />
-        {busy && posts.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground text-sm">Loading…</div>
-        ) : posts.length === 0 ? (
-          <div className="glass rounded-3xl p-10 text-center text-muted-foreground">No posts yet. Be the first.</div>
-        ) : (
-          posts.map((p) => <PostCard key={p.id} post={p} onChange={load} />)
-        )}
+        <div className="glass-strong rounded-3xl overflow-hidden">
+          {busy && posts.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground text-sm">Loading…</div>
+          ) : posts.length === 0 ? (
+            <div className="p-10 text-center text-muted-foreground">No posts yet. Be the first.</div>
+          ) : (
+            posts.map((p) => <PostCard key={p.id} post={p} onChange={load} />)
+          )}
+        </div>
       </div>
     </Layout>
   );
