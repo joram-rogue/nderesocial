@@ -2,22 +2,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { TikTokEmbed } from "@/components/TikTokEmbed";
+import { ExternalReel } from "@/components/ExternalReel";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { resolveTikTokUrl } from "@/lib/tiktok";
+import { parseAnyVideoLink } from "@/lib/anyLink";
 import { CameraCapture } from "@/components/CameraCapture";
 import { LogoLoader } from "@/components/LogoLoader";
 import { MediaEditor, EditorResult } from "@/components/MediaEditor";
 import {
-  Plus, Shuffle, Trash2, Sparkles, Link2, X, Loader2,
-  Home, Film, MessageCircle, User, LogOut, Video,
+  Shuffle, Trash2, Sparkles, Link2, X, Loader2,
+  Home, Film, MessageCircle, User, LogOut, Video, Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/ndere-logo.png";
 
 type FeedItem =
-  | { kind: "tiktok"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string }
+  | { kind: "external"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string; platform: string; embed_url: string | null }
   | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null };
 
 export default function Reels() {
