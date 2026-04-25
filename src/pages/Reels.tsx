@@ -40,12 +40,12 @@ export default function Reels() {
 
   const load = async () => {
     const [tt, ur] = await Promise.all([
-      supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by").order("created_at", { ascending: false }),
+      supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url").order("created_at", { ascending: false }),
       supabase.from("user_reels").select("id,video_url,caption,user_id,filter_css").order("created_at", { ascending: false }),
     ]);
     const merged: FeedItem[] = [
       ...(ur.data ?? []).map((r) => ({ kind: "user" as const, ...r })),
-      ...(tt.data ?? []).map((r) => ({ kind: "tiktok" as const, ...r })),
+      ...(tt.data ?? []).map((r: any) => ({ kind: "external" as const, ...r })),
     ];
     setItems(merged);
   };
@@ -84,18 +84,25 @@ export default function Reels() {
     return () => obs.disconnect();
   }, [shuffled]);
 
-  // Admin: paste TikTok links
+  // Everyone: paste any video link (TikTok, YouTube, Instagram, mp4, etc.)
   const addMany = async () => {
     if (!user) { toast.error("Sign in"); return; }
-    const tokens = bulk.split(/[\s,]+/).map((t) => t.trim()).filter(Boolean);
+    const tokens = bulk.split(/[\s,\n]+/).map((t) => t.trim()).filter(Boolean);
     if (tokens.length === 0) { toast.error("Paste a link"); return; }
     setBusy(true);
-    const rows: { tiktok_url: string; video_id: string; author_handle: string | null; added_by: string }[] = [];
+    const rows: any[] = [];
     const skipped: string[] = [];
-    const results = await Promise.all(tokens.map((t) => resolveTikTokUrl(t).then((p) => ({ t, p }))));
-    for (const { t, p } of results) {
+    for (const t of tokens) {
+      const p = parseAnyVideoLink(t);
       if (!p) { skipped.push(t); continue; }
-      rows.push({ tiktok_url: t, video_id: p.id, author_handle: p.handle, added_by: user.id });
+      rows.push({
+        tiktok_url: t,
+        video_id: p.video_id,
+        author_handle: p.author_handle,
+        added_by: user.id,
+        platform: p.platform,
+        embed_url: p.embed_url,
+      });
     }
     if (rows.length === 0) {
       setBusy(false);
@@ -154,7 +161,7 @@ export default function Reels() {
 
   const remove = async (item: FeedItem) => {
     if (!confirm("Remove this reel?")) return;
-    const table = item.kind === "tiktok" ? "tiktok_reels" : "user_reels";
+    const table = item.kind === "external" ? "tiktok_reels" : "user_reels";
     const { error } = await supabase.from(table).delete().eq("id", item.id);
     if (error) { toast.error(error.message); return; }
     load();
@@ -162,7 +169,7 @@ export default function Reels() {
 
   const canDelete = (item: FeedItem) => {
     if (isAdmin) return true;
-    return item.kind === "tiktok" ? item.added_by === user?.id : item.user_id === user?.id;
+    return item.kind === "external" ? item.added_by === user?.id : item.user_id === user?.id;
   };
 
   return (
