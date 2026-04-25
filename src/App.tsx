@@ -10,6 +10,7 @@ import Reels from "./pages/Reels";
 import Chat from "./pages/Chat";
 import Compose from "./pages/Compose";
 import NotFound from "./pages/NotFound";
+import { AutoFixOverlay } from "./components/AutoFixOverlay";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner theme="dark" position="top-center" />
+      <AutoFixOverlay />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
