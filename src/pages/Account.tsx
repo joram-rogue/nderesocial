@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { Layout } from "@/components/Layout";
 import { PostCard, type Post } from "@/components/PostCard";
 import { ProfileEditor } from "@/components/ProfileEditor";
+import { InviteSheet } from "@/components/InviteSheet";
 import { fetchPostsWithProfiles } from "@/lib/posts";
-import { Pencil, Moon, Sun } from "lucide-react";
+import { Pencil, Moon, Sun, Share2, Radio, UserPlus, UserCheck } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Account() {
   const { id } = useParams();
@@ -19,6 +21,13 @@ export default function Account() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [role, setRole] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+
+  const [followers, setFollowers] = useState(0);
+  const [following, setFollowing] = useState(0);
+  const [likesTotal, setLikesTotal] = useState(0);
+  const [iFollow, setIFollow] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   const load = async () => {
     if (!targetId) return;
@@ -27,8 +36,46 @@ export default function Account() {
     const { data: r } = await supabase.from("user_roles").select("role").eq("user_id", targetId).maybeSingle();
     setRole(r?.role ?? null);
     setPosts(await fetchPostsWithProfiles({ user_id: targetId }));
+
+    // Stats
+    const [{ count: fc }, { count: fgc }, { data: postIds }] = await Promise.all([
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", targetId),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", targetId),
+      supabase.from("posts").select("id").eq("user_id", targetId),
+    ]);
+    setFollowers(fc ?? 0);
+    setFollowing(fgc ?? 0);
+
+    if (postIds && postIds.length > 0) {
+      const { count: lc } = await supabase
+        .from("likes").select("*", { count: "exact", head: true })
+        .in("post_id", postIds.map((p: any) => p.id));
+      setLikesTotal(lc ?? 0);
+    } else setLikesTotal(0);
+
+    if (user && !isSelf) {
+      const { data: f } = await supabase.from("follows")
+        .select("id").eq("follower_id", user.id).eq("following_id", targetId).maybeSingle();
+      setIFollow(!!f);
+    }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [targetId]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [targetId, user?.id]);
+
+  const toggleFollow = async () => {
+    if (!user || !targetId) return;
+    setFollowBusy(true);
+    if (iFollow) {
+      const { error } = await supabase.from("follows").delete()
+        .eq("follower_id", user.id).eq("following_id", targetId);
+      if (error) toast.error(error.message);
+      else { setIFollow(false); setFollowers((n) => Math.max(0, n - 1)); }
+    } else {
+      const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
+      if (error) toast.error(error.message);
+      else { setIFollow(true); setFollowers((n) => n + 1); }
+    }
+    setFollowBusy(false);
+  };
 
   return (
     <Layout>
@@ -47,7 +94,6 @@ export default function Account() {
             <h1 className="font-display text-xl font-bold truncate">{profile?.display_name ?? "User"}</h1>
             <div className="flex items-center gap-2 mt-1">
               {role && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/20 text-primary font-semibold">{role}</span>}
-              <span className="text-xs text-muted-foreground">{posts.length} post{posts.length !== 1 ? "s" : ""}</span>
             </div>
           </div>
           {isSelf && (
@@ -61,7 +107,39 @@ export default function Account() {
             </div>
           )}
         </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-2 mt-5 text-center">
+          <Stat label="Posts" value={posts.length} />
+          <Stat label="Followers" value={followers} />
+          <Stat label="Following" value={following} />
+          <Stat label="Likes" value={likesTotal} />
+        </div>
+
         {profile?.bio && <p className="mt-4 text-sm text-muted-foreground whitespace-pre-wrap">{profile.bio}</p>}
+
+        {/* Action row */}
+        <div className="mt-5 flex flex-wrap gap-2">
+          {!isSelf && user && (
+            <button
+              onClick={toggleFollow}
+              disabled={followBusy}
+              className={`flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
+                iFollow ? "glass text-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"
+              }`}
+            >
+              {iFollow ? <><UserCheck className="w-4 h-4" /> Following</> : <><UserPlus className="w-4 h-4" /> Follow</>}
+            </button>
+          )}
+          {isSelf && (
+            <Link to="/live" className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors">
+              <Radio className="w-4 h-4" /> Go Live
+            </Link>
+          )}
+          <button onClick={() => setInviteOpen(true)} className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold glass hover:bg-primary/10">
+            <Share2 className="w-4 h-4" /> Invite
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -75,6 +153,14 @@ export default function Account() {
       {editing && profile && (
         <ProfileEditor initial={profile} onSaved={load} onClose={() => setEditing(false)} />
       )}
+      {inviteOpen && <InviteSheet onClose={() => setInviteOpen(false)} />}
     </Layout>
   );
 }
+
+const Stat = ({ label, value }: { label: string; value: number }) => (
+  <div className="glass rounded-2xl py-2">
+    <div className="font-display font-bold text-base leading-tight">{value}</div>
+    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{label}</div>
+  </div>
+);

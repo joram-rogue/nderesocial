@@ -110,6 +110,27 @@ export type Database = {
         }
         Relationships: []
       }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -204,7 +225,9 @@ export type Database = {
           added_by: string
           author_handle: string | null
           created_at: string
+          embed_url: string | null
           id: string
+          platform: string
           tiktok_url: string
           video_id: string
         }
@@ -212,7 +235,9 @@ export type Database = {
           added_by: string
           author_handle?: string | null
           created_at?: string
+          embed_url?: string | null
           id?: string
+          platform?: string
           tiktok_url: string
           video_id: string
         }
@@ -220,7 +245,9 @@ export type Database = {
           added_by?: string
           author_handle?: string | null
           created_at?: string
+          embed_url?: string | null
           id?: string
+          platform?: string
           tiktok_url?: string
           video_id?: string
         }
