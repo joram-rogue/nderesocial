@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* Modern Coffee — liquid glass */
+    /* Modern Coffee — liquid glass (default) */
     --background: 22 38% 6%;        /* #1a0f0a */
     --foreground: 30 50% 92%;
 
@@ -41,6 +41,8 @@
     --glass-bg: 24 30% 12% / 0.55;
     --glass-border: 30 40% 70% / 0.12;
     --glass-highlight: 32 73% 83% / 0.08;
+    --glass-strong-bg: 24 30% 14% / 0.78;
+    --glass-input-bg: 24 30% 10% / 0.6;
 
     --gradient-warm: linear-gradient(135deg, hsl(22 47% 53%) 0%, hsl(32 73% 65%) 100%);
     --gradient-bg: radial-gradient(ellipse at 20% 0%, hsl(24 50% 18% / 0.6) 0%, transparent 50%),
@@ -49,6 +51,48 @@
 
     --shadow-glass: 0 8px 32px 0 hsl(22 50% 3% / 0.6), inset 0 1px 0 0 hsl(32 73% 83% / 0.08);
     --shadow-warm: 0 10px 40px -10px hsl(22 47% 53% / 0.4);
+  }
+
+  /* Midnight Coffee — deeper, near-black variant of the same warm palette */
+  .theme-midnight {
+    --background: 22 30% 3%;
+    --foreground: 30 35% 90%;
+
+    --card: 22 25% 5%;
+    --card-foreground: 30 35% 90%;
+
+    --popover: 22 25% 4%;
+    --popover-foreground: 30 35% 90%;
+
+    --primary: 22 55% 58%;
+    --primary-foreground: 22 30% 3%;
+
+    --secondary: 24 25% 10%;
+    --secondary-foreground: 30 35% 90%;
+
+    --muted: 24 18% 8%;
+    --muted-foreground: 30 15% 55%;
+
+    --accent: 32 60% 75%;
+    --accent-foreground: 22 30% 3%;
+
+    --border: 28 18% 11%;
+    --input: 28 18% 8%;
+    --ring: 22 55% 58%;
+
+    --glass-bg: 24 22% 6% / 0.6;
+    --glass-border: 30 35% 65% / 0.08;
+    --glass-highlight: 32 60% 75% / 0.05;
+    --glass-strong-bg: 24 22% 7% / 0.85;
+    --glass-input-bg: 24 22% 5% / 0.7;
+
+    --gradient-warm: linear-gradient(135deg, hsl(22 55% 50%) 0%, hsl(32 60% 60%) 100%);
+    --gradient-bg: radial-gradient(ellipse at 20% 0%, hsl(24 40% 10% / 0.5) 0%, transparent 50%),
+                   radial-gradient(ellipse at 80% 100%, hsl(22 50% 14% / 0.35) 0%, transparent 50%),
+                   hsl(22 30% 3%);
+
+    --shadow-glass: 0 8px 32px 0 hsl(0 0% 0% / 0.75), inset 0 1px 0 0 hsl(32 60% 75% / 0.04);
+    --shadow-warm: 0 10px 40px -10px hsl(22 55% 50% / 0.45);
   }
 
   .dark { color-scheme: dark; }
@@ -77,14 +121,14 @@
     box-shadow: var(--shadow-glass);
   }
   .glass-strong {
-    background: hsl(24 30% 14% / 0.78);
+    background: hsl(var(--glass-strong-bg));
     backdrop-filter: blur(32px) saturate(180%);
     -webkit-backdrop-filter: blur(32px) saturate(180%);
     border: 1px solid hsl(var(--glass-border));
     box-shadow: var(--shadow-glass);
   }
   .glass-input {
-    background: hsl(24 30% 10% / 0.6);
+    background: hsl(var(--glass-input-bg));
     backdrop-filter: blur(12px);
     border: 1px solid hsl(var(--glass-border));
   }
