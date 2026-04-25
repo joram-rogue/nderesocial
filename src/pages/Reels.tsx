@@ -190,16 +190,21 @@ export default function Reels() {
             >
               <Shuffle className="w-4 h-4" />
             </button>
-            {/* Admin-only TikTok paste */}
-            {isAdmin && (
-              <button
-                onClick={() => setComposerOpen((s) => !s)}
-                className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
-                aria-label="Paste TikTok"
-              >
-                {composerOpen ? <X className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
-              </button>
-            )}
+            {/* Everyone: paste any video link */}
+            <button
+              onClick={() => setComposerOpen((s) => !s)}
+              className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
+              aria-label="Paste link"
+            >
+              {composerOpen ? <X className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => navigate("/live")}
+              className="p-2 rounded-full bg-destructive/20 backdrop-blur-md hover:bg-destructive/30 text-destructive"
+              aria-label="Go live"
+            >
+              <Radio className="w-4 h-4" />
+            </button>
             {user && (
               <button
                 onClick={async () => { await signOut(); navigate("/auth"); }}
@@ -224,15 +229,15 @@ export default function Reels() {
         </button>
       )}
 
-      {/* Admin composer overlay */}
-      {composerOpen && isAdmin && (
+      {/* Link composer overlay — open to all */}
+      {composerOpen && (
         <div className="absolute inset-0 z-40 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setComposerOpen(false)}>
           <div className="w-full sm:max-w-md bg-card text-foreground rounded-t-3xl sm:rounded-3xl p-5 space-y-3 animate-fade-in border border-white/10" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <Link2 className="w-4 h-4 text-primary" /> Curate a TikTok
+              <Link2 className="w-4 h-4 text-primary" /> Add a video link
             </div>
-            <p className="text-xs text-muted-foreground">Paste TikTok share links — one per line.</p>
-            <Textarea className="glass-input min-h-[110px] font-mono text-xs" placeholder="https://vm.tiktok.com/…" value={bulk} onChange={(e) => setBulk(e.target.value)} />
+            <p className="text-xs text-muted-foreground">TikTok, YouTube, Instagram, Vimeo, mp4 — one per line.</p>
+            <Textarea className="glass-input min-h-[110px] font-mono text-xs" placeholder="https://…" value={bulk} onChange={(e) => setBulk(e.target.value)} />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => { setComposerOpen(false); setBulk(""); }} className="rounded-xl">Cancel</Button>
               <Button onClick={addMany} disabled={busy || !bulk.trim()} className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl gap-2">
@@ -321,20 +326,20 @@ export default function Reels() {
                         }}
                       />
                     ) : (
-                      <div className="w-full">
-                        <TikTokEmbed videoId={item.video_id} handle={item.author_handle} />
+                      <div className="w-full h-full">
+                        <ExternalReel platform={item.platform} embed_url={item.embed_url} video_id={item.video_id} handle={item.author_handle} />
                       </div>
                     )}
 
                     {/* Right action rail */}
                     <div className="absolute right-3 bottom-28 flex flex-col items-center gap-4 z-10">
-                      {item.kind === "tiktok" && (
+                      {item.kind === "external" && (
                         <a
                           href={item.tiktok_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
-                          aria-label="Open on TikTok"
+                          aria-label="Open original"
                         >
                           <Film className="w-5 h-5" />
                         </a>
@@ -353,8 +358,8 @@ export default function Reels() {
                     {/* Bottom caption */}
                     <div className="absolute left-4 right-20 bottom-28 z-10 pointer-events-none">
                       <div className="text-sm font-semibold drop-shadow-lg">
-                        {item.kind === "tiktok"
-                          ? `@${item.author_handle ?? "tiktok"}`
+                        {item.kind === "external"
+                          ? `@${item.author_handle ?? item.platform}`
                           : "Ndere FAM"}
                       </div>
                       {item.kind === "user" && item.caption && (
