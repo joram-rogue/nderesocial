@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { Layout } from "@/components/Layout";
 import { PostCard, type Post } from "@/components/PostCard";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { fetchPostsWithProfiles } from "@/lib/posts";
-import { Pencil } from "lucide-react";
+import { Pencil, Moon, Sun } from "lucide-react";
 
 export default function Account() {
   const { id } = useParams();
