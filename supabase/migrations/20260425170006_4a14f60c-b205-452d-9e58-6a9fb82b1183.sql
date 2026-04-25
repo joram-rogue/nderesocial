@@ -1,0 +1,3 @@
+ALTER TABLE public.tiktok_reels
+  ADD COLUMN IF NOT EXISTS platform TEXT NOT NULL DEFAULT 'tiktok',
+  ADD COLUMN IF NOT EXISTS embed_url TEXT;

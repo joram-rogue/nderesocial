@@ -225,7 +225,9 @@ export type Database = {
           added_by: string
           author_handle: string | null
           created_at: string
+          embed_url: string | null
           id: string
+          platform: string
           tiktok_url: string
           video_id: string
         }
@@ -233,7 +235,9 @@ export type Database = {
           added_by: string
           author_handle?: string | null
           created_at?: string
+          embed_url?: string | null
           id?: string
+          platform?: string
           tiktok_url: string
           video_id: string
         }
@@ -241,7 +245,9 @@ export type Database = {
           added_by?: string
           author_handle?: string | null
           created_at?: string
+          embed_url?: string | null
           id?: string
+          platform?: string
           tiktok_url?: string
           video_id?: string
         }
