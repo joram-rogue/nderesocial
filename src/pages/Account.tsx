@@ -2,15 +2,17 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { Layout } from "@/components/Layout";
 import { PostCard, type Post } from "@/components/PostCard";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { fetchPostsWithProfiles } from "@/lib/posts";
-import { Pencil } from "lucide-react";
+import { Pencil, Moon, Sun } from "lucide-react";
 
 export default function Account() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { theme, toggle } = useTheme();
   const targetId = id || user?.id;
   const isSelf = !id || id === user?.id;
   const [profile, setProfile] = useState<{ display_name: string; bio: string | null; avatar_url: string | null } | null>(null);
@@ -49,9 +51,14 @@ export default function Account() {
             </div>
           </div>
           {isSelf && (
-            <button onClick={() => setEditing(true)} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Edit">
-              <Pencil className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={toggle} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Toggle theme" title={theme === "midnight" ? "Switch to Coffee" : "Switch to Midnight"}>
+                {theme === "midnight" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+              <button onClick={() => setEditing(true)} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Edit">
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
           )}
         </div>
         {profile?.bio && <p className="mt-4 text-sm text-muted-foreground whitespace-pre-wrap">{profile.bio}</p>}
