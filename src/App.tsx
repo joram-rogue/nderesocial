@@ -9,8 +9,10 @@ import Account from "./pages/Account";
 import Reels from "./pages/Reels";
 import Chat from "./pages/Chat";
 import Compose from "./pages/Compose";
+import Live from "./pages/Live";
 import NotFound from "./pages/NotFound";
 import { AutoFixOverlay } from "./components/AutoFixOverlay";
+import { InstallPrompt } from "./components/InstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +21,7 @@ const App = () => (
     <TooltipProvider>
       <Sonner theme="dark" position="top-center" />
       <AutoFixOverlay />
+      <InstallPrompt />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
@@ -27,6 +30,8 @@ const App = () => (
             <Route path="/reels" element={<Reels />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/compose" element={<Compose />} />
+            <Route path="/live" element={<Live />} />
+            <Route path="/live/:id" element={<Live />} />
             <Route path="/account" element={<Account />} />
             <Route path="/u/:id" element={<Account />} />
             <Route path="*" element={<NotFound />} />
