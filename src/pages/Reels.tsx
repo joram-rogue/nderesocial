@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ExternalReel } from "@/components/ExternalReel";
+import { ReelActions } from "@/components/ReelActions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { parseAnyVideoLink } from "@/lib/anyLink";
@@ -39,9 +40,13 @@ export default function Reels() {
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
 
   const load = async () => {
+    const nowIso = new Date().toISOString();
     const [tt, ur] = await Promise.all([
       supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url").order("created_at", { ascending: false }),
-      supabase.from("user_reels").select("id,video_url,caption,user_id,filter_css").order("created_at", { ascending: false }),
+      supabase.from("user_reels")
+        .select("id,video_url,caption,user_id,filter_css,expires_at")
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order("created_at", { ascending: false }),
     ]);
     const merged: FeedItem[] = [
       ...(ur.data ?? []).map((r) => ({ kind: "user" as const, ...r })),
