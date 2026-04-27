@@ -21,6 +21,15 @@ type FeedItem =
   | { kind: "external"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string; platform: string; embed_url: string | null }
   | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null; expires_at: string | null };
 
+const expiryLabel = (iso: string) => {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "Expired";
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  if (h >= 1) return `Expires in ${h}h ${m}m`;
+  return `Expires in ${m}m`;
+};
+
 export default function Reels() {
   const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
