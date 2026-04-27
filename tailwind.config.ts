@@ -39,6 +39,7 @@ export default {
           "0%":   { clipPath: "inset(100% 0 0 0)" },
           "100%": { clipPath: "inset(0 0 0 0)" },
         },
+        "slide-up": { from: { transform: "translateY(100%)" }, to: { transform: "translateY(0)" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -46,6 +47,7 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "shimmer": "shimmer 2s linear infinite",
         "logo-fill": "logo-fill 1.4s ease-in-out infinite alternate",
+        "slide-up": "slide-up 0.25s ease-out",
       },
     },
   },

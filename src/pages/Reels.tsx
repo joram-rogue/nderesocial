@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ExternalReel } from "@/components/ExternalReel";
+import { ReelActions } from "@/components/ReelActions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { parseAnyVideoLink } from "@/lib/anyLink";
@@ -18,7 +19,16 @@ import logo from "@/assets/ndere-logo.png";
 
 type FeedItem =
   | { kind: "external"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string; platform: string; embed_url: string | null }
-  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null };
+  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null; expires_at: string | null };
+
+const expiryLabel = (iso: string) => {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "Expired";
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  if (h >= 1) return `Expires in ${h}h ${m}m`;
+  return `Expires in ${m}m`;
+};
 
 export default function Reels() {
   const { user, role, signOut } = useAuth();
@@ -39,9 +49,13 @@ export default function Reels() {
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
 
   const load = async () => {
+    const nowIso = new Date().toISOString();
     const [tt, ur] = await Promise.all([
       supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url").order("created_at", { ascending: false }),
-      supabase.from("user_reels").select("id,video_url,caption,user_id,filter_css").order("created_at", { ascending: false }),
+      supabase.from("user_reels")
+        .select("id,video_url,caption,user_id,filter_css,expires_at")
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order("created_at", { ascending: false }),
     ]);
     const merged: FeedItem[] = [
       ...(ur.data ?? []).map((r) => ({ kind: "user" as const, ...r })),
@@ -333,6 +347,12 @@ export default function Reels() {
 
                     {/* Right action rail */}
                     <div className="absolute right-3 bottom-28 flex flex-col items-center gap-4 z-10">
+                      <ReelActions
+                        reelId={item.id}
+                        reelKind={item.kind}
+                        shareUrl={item.kind === "external" ? item.tiktok_url : `${window.location.origin}/reels`}
+                        shareTitle={item.kind === "user" ? item.caption ?? "Ndere Reel" : `@${item.author_handle ?? item.platform}`}
+                      />
                       {item.kind === "external" && (
                         <a
                           href={item.tiktok_url}
@@ -364,6 +384,11 @@ export default function Reels() {
                       </div>
                       {item.kind === "user" && item.caption && (
                         <div className="text-[12px] text-white/85 drop-shadow line-clamp-2 mt-0.5">{item.caption}</div>
+                      )}
+                      {item.kind === "user" && item.expires_at && (
+                        <div className="mt-1.5 inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/20 text-accent backdrop-blur-md pointer-events-auto">
+                          {expiryLabel(item.expires_at)}
+                        </div>
                       )}
                     </div>
                   </div>

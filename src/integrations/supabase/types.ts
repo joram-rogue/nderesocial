@@ -223,6 +223,57 @@ export type Database = {
         }
         Relationships: []
       }
+      reel_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          reel_id: string
+          reel_kind: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          reel_id: string
+          reel_kind: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          reel_id?: string
+          reel_kind?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reel_likes: {
+        Row: {
+          created_at: string
+          id: string
+          reel_id: string
+          reel_kind: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reel_id: string
+          reel_kind: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reel_id?: string
+          reel_kind?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tiktok_reels: {
         Row: {
           added_by: string
@@ -260,6 +311,7 @@ export type Database = {
         Row: {
           caption: string | null
           created_at: string
+          expires_at: string | null
           filter_css: string | null
           id: string
           user_id: string
@@ -268,6 +320,7 @@ export type Database = {
         Insert: {
           caption?: string | null
           created_at?: string
+          expires_at?: string | null
           filter_css?: string | null
           id?: string
           user_id: string
@@ -276,6 +329,7 @@ export type Database = {
         Update: {
           caption?: string | null
           created_at?: string
+          expires_at?: string | null
           filter_css?: string | null
           id?: string
           user_id?: string
