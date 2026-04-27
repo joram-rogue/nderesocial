@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { Layout } from "@/components/Layout";
-import { PostCard, type Post } from "@/components/PostCard";
+import { PostsGrid } from "@/components/PostsGrid";
+import { type Post } from "@/components/PostCard";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { InviteSheet } from "@/components/InviteSheet";
+import { StoriesStrip } from "@/components/StoriesStrip";
 import { fetchPostsWithProfiles } from "@/lib/posts";
 import { Pencil, Moon, Sun, Share2, Radio, UserPlus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -142,13 +144,18 @@ export default function Account() {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {posts.length === 0 ? (
-          <div className="glass rounded-3xl p-10 text-center text-muted-foreground">No posts yet.</div>
-        ) : (
-          posts.map((p) => <PostCard key={p.id} post={p} onChange={load} />)
-        )}
+      {/* Stories strip */}
+      <div className="glass rounded-3xl px-4 py-3 mb-4">
+        <StoriesStrip
+          profileUserId={targetId!}
+          isSelf={isSelf}
+          displayName={profile?.display_name}
+          avatarUrl={profile?.avatar_url}
+        />
       </div>
+
+      {/* Posts grid (excludes stories and reels) */}
+      <PostsGrid posts={posts} onChange={load} />
 
       {editing && profile && (
         <ProfileEditor initial={profile} onSaved={load} onClose={() => setEditing(false)} />

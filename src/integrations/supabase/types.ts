@@ -167,6 +167,7 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          is_story: boolean
           media_kind: Database["public"]["Enums"]["media_kind"]
           media_url: string | null
           user_id: string
@@ -177,6 +178,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          is_story?: boolean
           media_kind?: Database["public"]["Enums"]["media_kind"]
           media_url?: string | null
           user_id: string
@@ -187,6 +189,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          is_story?: boolean
           media_kind?: Database["public"]["Enums"]["media_kind"]
           media_url?: string | null
           user_id?: string
