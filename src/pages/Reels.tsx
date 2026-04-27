@@ -376,6 +376,11 @@ export default function Reels() {
                       {item.kind === "user" && item.caption && (
                         <div className="text-[12px] text-white/85 drop-shadow line-clamp-2 mt-0.5">{item.caption}</div>
                       )}
+                      {item.kind === "user" && item.expires_at && (
+                        <div className="mt-1.5 inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/20 text-accent backdrop-blur-md pointer-events-auto">
+                          {expiryLabel(item.expires_at)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
