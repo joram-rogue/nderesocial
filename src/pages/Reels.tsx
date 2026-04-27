@@ -338,6 +338,12 @@ export default function Reels() {
 
                     {/* Right action rail */}
                     <div className="absolute right-3 bottom-28 flex flex-col items-center gap-4 z-10">
+                      <ReelActions
+                        reelId={item.id}
+                        reelKind={item.kind}
+                        shareUrl={item.kind === "external" ? item.tiktok_url : `${window.location.origin}/reels`}
+                        shareTitle={item.kind === "user" ? item.caption ?? "Ndere Reel" : `@${item.author_handle ?? item.platform}`}
+                      />
                       {item.kind === "external" && (
                         <a
                           href={item.tiktok_url}
