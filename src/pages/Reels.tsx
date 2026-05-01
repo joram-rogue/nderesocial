@@ -125,10 +125,10 @@ export default function Reels() {
     }
     const { error } = await supabase.from("tiktok_reels").insert(rows);
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(`Couldn't add: ${error.message}`); return; }
     setBulk("");
     setComposerOpen(false);
-    toast.success(`Added ${rows.length}${skipped.length ? ` · skipped ${skipped.length}` : ""}`);
+    toast.success(`Added ${rows.length}${skipped.length ? ` · skipped ${skipped.length}` : ""} · expires in 30 min`);
     load();
   };
 
