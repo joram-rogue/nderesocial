@@ -30,23 +30,26 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       <main className="max-w-2xl mx-auto px-4 pt-5">{children}</main>
 
       {user && (
-        <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 glass-strong rounded-full px-2 py-2 flex items-center gap-1 z-40 shadow-[var(--shadow-glass)]">
-          <NavLink to="/" end className={({ isActive }) => `p-3 rounded-full transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Home className="w-5 h-5" />
-          </NavLink>
-          <NavLink to="/reels" className={({ isActive }) => `p-3 rounded-full transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Film className="w-5 h-5" />
-          </NavLink>
-          <NavLink to="/compose" aria-label="New post"
-            className={({ isActive }) => `p-3 rounded-full transition-all bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[var(--shadow-warm)] ${isActive ? "scale-110" : "hover:scale-105"}`}>
-            <Plus className="w-5 h-5" />
-          </NavLink>
-          <NavLink to="/chat" className={({ isActive }) => `p-3 rounded-full transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <MessageCircle className="w-5 h-5" />
-          </NavLink>
-          <NavLink to="/account" className={({ isActive }) => `p-3 rounded-full transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <User className="w-5 h-5" />
-          </NavLink>
+        <nav className="fixed bottom-0 inset-x-0 z-40 bg-background/85 backdrop-blur-xl border-t border-border/60 pb-[env(safe-area-inset-bottom)]">
+          <div className="max-w-2xl mx-auto grid grid-cols-5 h-16">
+            <NavLink to="/" end className={({ isActive }) => `flex items-center justify-center transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+              <Home className="w-6 h-6" />
+            </NavLink>
+            <NavLink to="/reels" className={({ isActive }) => `flex items-center justify-center transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+              <Film className="w-6 h-6" />
+            </NavLink>
+            <NavLink to="/compose" aria-label="New post" className="flex items-center justify-center">
+              <span className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[var(--shadow-warm)]">
+                <Plus className="w-6 h-6" />
+              </span>
+            </NavLink>
+            <NavLink to="/chat" className={({ isActive }) => `flex items-center justify-center transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+              <MessageCircle className="w-6 h-6" />
+            </NavLink>
+            <NavLink to="/account" className={({ isActive }) => `flex items-center justify-center transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+              <User className="w-6 h-6" />
+            </NavLink>
+          </div>
         </nav>
       )}
     </div>
