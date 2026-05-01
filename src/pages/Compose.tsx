@@ -104,7 +104,7 @@ export default function Compose() {
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="What's happening? Videos need #ndere"
+          placeholder="What's happening? Use @ to mention. Videos need #ndere"
           maxLength={500}
           autoFocus
           className="glass-input resize-none min-h-[140px] text-base border-0 focus-visible:ring-1 focus-visible:ring-primary/40"
