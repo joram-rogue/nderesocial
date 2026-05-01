@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string | null
@@ -160,6 +181,27 @@ export type Database = {
           },
         ]
       }
+      post_views: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           audience: Database["public"]["Enums"]["post_audience"]
@@ -274,12 +316,34 @@ export type Database = {
         }
         Relationships: []
       }
+      reposts: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tiktok_reels: {
         Row: {
           added_by: string
           author_handle: string | null
           created_at: string
           embed_url: string | null
+          expires_at: string | null
           id: string
           platform: string
           tiktok_url: string
@@ -290,6 +354,7 @@ export type Database = {
           author_handle?: string | null
           created_at?: string
           embed_url?: string | null
+          expires_at?: string | null
           id?: string
           platform?: string
           tiktok_url: string
@@ -300,6 +365,7 @@ export type Database = {
           author_handle?: string | null
           created_at?: string
           embed_url?: string | null
+          expires_at?: string | null
           id?: string
           platform?: string
           tiktok_url?: string
