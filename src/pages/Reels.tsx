@@ -239,7 +239,7 @@ export default function Reels() {
       {user && !cameraOpen && !pendingCaption && (
         <button
           onClick={() => setCameraOpen(true)}
-          className="fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[var(--shadow-warm)] hover:scale-110 transition-transform"
+          className="fixed right-4 bottom-20 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[var(--shadow-warm)] hover:scale-110 transition-transform"
           aria-label="Record reel"
         >
           <Video className="w-6 h-6" />
