@@ -404,26 +404,28 @@ export default function Reels() {
         </div>
       )}
 
-      {/* Bottom nav */}
+      {/* Bottom nav (docked) */}
       {user && (
-        <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 bg-black/50 backdrop-blur-xl border border-white/10 rounded-full px-2 py-2 flex gap-1 shadow-2xl">
-          {[
-            { to: "/", icon: Home, end: true },
-            { to: "/reels", icon: Film },
-            { to: "/chat", icon: MessageCircle },
-            { to: "/account", icon: User },
-          ].map(({ to, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `p-3 rounded-full transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-white/70 hover:text-white"}`
-              }
-            >
-              <Icon className="w-5 h-5" />
-            </NavLink>
-          ))}
+        <nav className="fixed bottom-0 inset-x-0 z-30 bg-black/85 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
+          <div className="max-w-2xl mx-auto grid grid-cols-4 h-16">
+            {[
+              { to: "/", icon: Home, end: true },
+              { to: "/reels", icon: Film },
+              { to: "/chat", icon: MessageCircle },
+              { to: "/account", icon: User },
+            ].map(({ to, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `flex items-center justify-center transition-colors ${isActive ? "text-primary" : "text-white/70 hover:text-white"}`
+                }
+              >
+                <Icon className="w-6 h-6" />
+              </NavLink>
+            ))}
+          </div>
         </nav>
       )}
     </div>
