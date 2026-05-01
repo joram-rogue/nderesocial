@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Heart, MessageCircle, Download, Trash2, Send, Reply } from "lucide-react";
+import { Heart, MessageCircle, Download, Trash2, Send, Reply, Repeat2, Bookmark, Share2, Eye, Smile } from "lucide-react";
 import { Watermark } from "./Watermark";
 import { downloadFile, downloadImageWithWatermark, downloadText } from "@/lib/download";
 import { toast } from "sonner";
@@ -22,6 +22,8 @@ type Comment = {
   id: string; user_id: string; content: string; parent_id: string | null; created_at: string;
   profile?: { display_name: string; avatar_url: string | null };
 };
+
+const QUICK_EMOJIS = ["❤️", "🔥", "😂", "😮", "😍", "👏", "🎉", "💯", "🥁", "🎶"];
 
 const Avatar = ({ url, name, size = 40 }: { url?: string | null; name?: string | null; size?: number }) => (
   <div
@@ -44,45 +46,108 @@ const timeAgo = (iso: string) => {
   return `${Math.floor(s / 86400)}d`;
 };
 
+// Renders text with @mentions as muted-primary spans (best-effort, by display_name).
+const renderText = (text: string) => {
+  const parts = text.split(/(@[A-Za-z0-9_.-]+)/g);
+  return parts.map((p, i) =>
+    p.startsWith("@") ? <span key={i} className="text-primary font-medium">{p}</span> : <span key={i}>{p}</span>
+  );
+};
+
 export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void }) => {
   const { user } = useAuth();
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
-  const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
-  const loadCounts = async () => {
-    const { count } = await supabase.from("likes").select("*", { count: "exact", head: true }).eq("post_id", post.id);
-    setLikes(count ?? 0);
-    if (user) {
-      const { data } = await supabase.from("likes").select("id").eq("post_id", post.id).eq("user_id", user.id).maybeSingle();
-      setLiked(!!data);
-    }
+  const [reposts, setReposts] = useState(0);
+  const [reposted, setReposted] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [views, setViews] = useState(0);
+
+  const viewedRef = useRef(false);
+
+  const loadAll = async () => {
+    const [{ count: lc }, likeMine, { count: rc }, repMine, bmMine, { count: vc }, cms] = await Promise.all([
+      supabase.from("likes").select("*", { count: "exact", head: true }).eq("post_id", post.id),
+      user ? supabase.from("likes").select("id").eq("post_id", post.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+      supabase.from("reposts").select("*", { count: "exact", head: true }).eq("post_id", post.id),
+      user ? supabase.from("reposts").select("id").eq("post_id", post.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+      user ? supabase.from("bookmarks").select("id").eq("post_id", post.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+      supabase.from("post_views").select("*", { count: "exact", head: true }).eq("post_id", post.id),
+      supabase.from("comments").select("*").eq("post_id", post.id).order("created_at", { ascending: true }),
+    ]);
+    setLikes(lc ?? 0);
+    setLiked(!!(likeMine as any)?.data);
+    setReposts(rc ?? 0);
+    setReposted(!!(repMine as any)?.data);
+    setBookmarked(!!(bmMine as any)?.data);
+    setViews(vc ?? 0);
+    const cdata = (cms as any).data ?? [];
+    if (cdata.length) {
+      const ids = [...new Set(cdata.map((c: any) => c.user_id))];
+      const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url").in("id", ids as string[]);
+      const m = new Map(profs?.map((p) => [p.id, p]));
+      setComments(cdata.map((c: any) => ({ ...c, profile: m.get(c.user_id) })) as Comment[]);
+    } else setComments([]);
   };
 
-  const loadComments = async () => {
-    const { data } = await supabase.from("comments").select("*").eq("post_id", post.id).order("created_at", { ascending: true });
-    if (!data) return;
-    const ids = [...new Set(data.map((c) => c.user_id))];
-    const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url").in("id", ids);
-    const m = new Map(profs?.map((p) => [p.id, p]));
-    setComments(data.map((c) => ({ ...c, profile: m.get(c.user_id) as any })) as Comment[]);
-  };
+  useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [post.id, user?.id]);
 
-  useEffect(() => { loadCounts(); }, [post.id, user?.id]);
-  useEffect(() => { if (showComments) loadComments(); }, [showComments]);
+  // Mark a view once per session per user
+  useEffect(() => {
+    if (!user || viewedRef.current) return;
+    viewedRef.current = true;
+    supabase.from("post_views").insert({ post_id: post.id, user_id: user.id }).then(({ error }) => {
+      if (!error) setViews((n) => n + 1);
+    });
+  }, [user?.id, post.id]);
 
   const toggleLike = async () => {
     if (!user) return;
+    setLiked((v) => !v);
+    setLikes((n) => (liked ? Math.max(0, n - 1) : n + 1));
     if (liked) {
       await supabase.from("likes").delete().eq("post_id", post.id).eq("user_id", user.id);
     } else {
       await supabase.from("likes").insert({ post_id: post.id, user_id: user.id });
     }
-    loadCounts();
+  };
+
+  const toggleRepost = async () => {
+    if (!user) return;
+    setReposted((v) => !v);
+    setReposts((n) => (reposted ? Math.max(0, n - 1) : n + 1));
+    if (reposted) {
+      await supabase.from("reposts").delete().eq("post_id", post.id).eq("user_id", user.id);
+    } else {
+      const { error } = await supabase.from("reposts").insert({ post_id: post.id, user_id: user.id });
+      if (!error) toast.success("Reposted");
+    }
+  };
+
+  const toggleBookmark = async () => {
+    if (!user) return;
+    setBookmarked((v) => !v);
+    if (bookmarked) {
+      await supabase.from("bookmarks").delete().eq("post_id", post.id).eq("user_id", user.id);
+    } else {
+      const { error } = await supabase.from("bookmarks").insert({ post_id: post.id, user_id: user.id });
+      if (!error) toast.success("Saved");
+    }
+  };
+
+  const share = async () => {
+    const url = `${window.location.origin}/u/${post.user_id}`;
+    const data = { title: post.profile?.display_name || "Ndere", text: post.content?.slice(0, 80) || "", url };
+    try {
+      if (navigator.share) await navigator.share(data);
+      else { await navigator.clipboard.writeText(url); toast.success("Link copied"); }
+    } catch {/* cancelled */}
   };
 
   const addComment = async (text: string, parent_id: string | null = null) => {
@@ -91,8 +156,8 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
       post_id: post.id, user_id: user.id, content: text.trim(), parent_id,
     });
     if (error) { toast.error(error.message); return; }
-    if (parent_id) { setReplyText(""); setReplyTo(null); } else { setNewComment(""); }
-    loadComments();
+    if (parent_id) { setReplyText(""); setReplyTo(null); } else { setNewComment(""); setEmojiOpen(false); }
+    loadAll();
   };
 
   const handleDownload = async () => {
@@ -142,7 +207,9 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
             )}
           </header>
 
-          {post.content && <p className="text-[15px] leading-snug whitespace-pre-wrap break-words mb-2">{post.content}</p>}
+          {post.content && (
+            <p className="text-[15px] leading-snug whitespace-pre-wrap break-words mb-2">{renderText(post.content)}</p>
+          )}
 
           {post.media_url && (
             <div className="relative rounded-2xl overflow-hidden border border-border/40 mb-2">
@@ -155,66 +222,100 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
             </div>
           )}
 
-          <div className="flex items-center justify-between max-w-[360px] -ml-2 text-muted-foreground">
-            <button onClick={() => setShowComments((s) => !s)} className="group flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
+          {/* Action bar — TikTok/X-style: comment, repost, bookmark, share, download + views */}
+          <div className="flex items-center justify-between -ml-2 text-muted-foreground">
+            <button className="group flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
               <MessageCircle className="w-[18px] h-[18px]" />
               <span className="text-xs font-medium">{comments.length || ""}</span>
             </button>
-            <button onClick={toggleLike} className={`group flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-destructive/10 transition-colors ${liked ? "text-destructive" : "hover:text-destructive"}`}>
-              <Heart className={`w-[18px] h-[18px] ${liked ? "fill-current" : ""}`} />
-              <span className="text-xs font-medium">{likes || ""}</span>
+            <button onClick={toggleRepost} className={`group flex items-center gap-1 px-2 py-1.5 rounded-full transition-colors ${reposted ? "text-emerald-500" : "hover:bg-emerald-500/10 hover:text-emerald-500"}`}>
+              <Repeat2 className="w-[18px] h-[18px]" />
+              <span className="text-xs font-medium">{reposts || ""}</span>
+            </button>
+            <button onClick={toggleBookmark} className={`group flex items-center gap-1 px-2 py-1.5 rounded-full transition-colors ${bookmarked ? "text-accent" : "hover:bg-accent/10 hover:text-accent"}`}>
+              <Bookmark className={`w-[18px] h-[18px] ${bookmarked ? "fill-current" : ""}`} />
+            </button>
+            <button onClick={share} className="group flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
+              <Share2 className="w-[18px] h-[18px]" />
             </button>
             <button onClick={handleDownload} className="group flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-accent/10 hover:text-accent transition-colors">
               <Download className="w-[18px] h-[18px]" />
             </button>
+            <div className="flex items-center gap-1 px-2 py-1.5 text-muted-foreground/80">
+              <Eye className="w-[16px] h-[16px]" />
+              <span className="text-xs font-medium">{views}</span>
+            </div>
           </div>
 
-          {showComments && (
-            <div className="mt-3 pt-3 border-t border-border/30 space-y-3">
-              <div className="flex gap-2">
-                <input value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment(newComment)}
-                  placeholder="Write a comment…" maxLength={300}
-                  className="flex-1 glass-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
-                <button onClick={() => addComment(newComment)} className="p-2 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary"><Send className="w-4 h-4" /></button>
-              </div>
+          {/* Like row separately to keep the heart prominent */}
+          <div className="-ml-2 -mt-1 mb-1">
+            <button onClick={toggleLike} className={`group inline-flex items-center gap-1 px-2 py-1.5 rounded-full transition-colors ${liked ? "text-destructive" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"}`}>
+              <Heart className={`w-[18px] h-[18px] ${liked ? "fill-current" : ""}`} />
+              <span className="text-xs font-medium">{likes || ""}</span>
+            </button>
+          </div>
 
-              {topComments.map((c) => (
-                <div key={c.id} className="space-y-2">
-                  <div className="flex gap-2.5">
-                    <Avatar url={c.profile?.avatar_url} name={c.profile?.display_name} size={28} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm">
-                        <span className="font-semibold mr-1.5">{c.profile?.display_name ?? "User"}</span>
-                        <span className="break-words">{c.content}</span>
-                      </div>
-                      <button onClick={() => setReplyTo(replyTo === c.id ? null : c.id)} className="text-[11px] text-muted-foreground hover:text-primary mt-0.5 inline-flex items-center gap-1">
-                        <Reply className="w-3 h-3" /> Reply
-                      </button>
+          {/* Comments — always visible */}
+          <div className="mt-2 pt-3 border-t border-border/30 space-y-3">
+            <div className="flex gap-2 items-center">
+              <button onClick={() => setEmojiOpen((s) => !s)} className={`p-2 rounded-full ${emojiOpen ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-white/5"}`} aria-label="Emoji">
+                <Smile className="w-4 h-4" />
+              </button>
+              <input value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment(newComment)}
+                placeholder="Write a comment… use @name to mention" maxLength={300}
+                className="flex-1 glass-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+              <button onClick={() => addComment(newComment)} className="p-2 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary"><Send className="w-4 h-4" /></button>
+            </div>
+            {emojiOpen && (
+              <div className="flex gap-1 flex-wrap">
+                {QUICK_EMOJIS.map((e) => (
+                  <button key={e} onClick={() => setNewComment((d) => d + e)} className="text-xl px-2 py-1 rounded-lg hover:bg-white/10 active:scale-90 transition-transform">
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {topComments.length === 0 && (
+              <p className="text-xs text-muted-foreground py-1">Be the first to comment ✨</p>
+            )}
+
+            {topComments.map((c) => (
+              <div key={c.id} className="space-y-2">
+                <div className="flex gap-2.5">
+                  <Avatar url={c.profile?.avatar_url} name={c.profile?.display_name} size={28} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm">
+                      <span className="font-semibold mr-1.5">{c.profile?.display_name ?? "User"}</span>
+                      <span className="break-words">{renderText(c.content)}</span>
+                    </div>
+                    <button onClick={() => setReplyTo(replyTo === c.id ? null : c.id)} className="text-[11px] text-muted-foreground hover:text-primary mt-0.5 inline-flex items-center gap-1">
+                      <Reply className="w-3 h-3" /> Reply
+                    </button>
+                  </div>
+                </div>
+
+                {repliesOf(c.id).map((r) => (
+                  <div key={r.id} className="flex gap-2 pl-9">
+                    <Avatar url={r.profile?.avatar_url} name={r.profile?.display_name} size={24} />
+                    <div className="text-sm flex-1 min-w-0">
+                      <span className="font-semibold mr-1.5">{r.profile?.display_name ?? "User"}</span>
+                      <span className="break-words">{renderText(r.content)}</span>
                     </div>
                   </div>
+                ))}
 
-                  {repliesOf(c.id).map((r) => (
-                    <div key={r.id} className="flex gap-2 pl-9">
-                      <Avatar url={r.profile?.avatar_url} name={r.profile?.display_name} size={24} />
-                      <div className="text-sm flex-1 min-w-0">
-                        <span className="font-semibold mr-1.5">{r.profile?.display_name ?? "User"}</span>
-                        <span className="break-words">{r.content}</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {replyTo === c.id && (
-                    <div className="flex gap-2 pl-9">
-                      <input value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment(replyText, c.id)}
-                        placeholder="Write a reply…" autoFocus maxLength={300}
-                        className="flex-1 glass-input rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
-                      <button onClick={() => addComment(replyText, c.id)} className="p-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary"><Send className="w-3.5 h-3.5" /></button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                {replyTo === c.id && (
+                  <div className="flex gap-2 pl-9">
+                    <input value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment(replyText, c.id)}
+                      placeholder="Write a reply…" autoFocus maxLength={300}
+                      className="flex-1 glass-input rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+                    <button onClick={() => addComment(replyText, c.id)} className="p-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary"><Send className="w-3.5 h-3.5" /></button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </article>
