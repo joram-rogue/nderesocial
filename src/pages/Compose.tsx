@@ -75,7 +75,7 @@ export default function Compose() {
         user_id: user.id, content: content.trim() || null, media_url, media_kind, audience,
       });
       if (error) throw error;
-      toast.success(isVideo ? "Posted — auto-deletes in 30 min" : "Posted");
+      toast.success(isVideo ? "Posted — auto-deletes in 3 days" : "Posted");
       navigate("/");
     } catch (e: any) {
       toast.error(e.message || "Failed to post");
