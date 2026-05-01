@@ -122,7 +122,7 @@ export default function Compose() {
             </button>
             {file?.type.startsWith("video") && (
               <div className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-background/70 backdrop-blur-md text-accent">
-                30 min lifespan
+                3 day lifespan
               </div>
             )}
           </div>
