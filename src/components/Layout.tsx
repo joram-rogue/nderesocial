@@ -8,7 +8,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen pb-28 md:pb-10">
+    <div className="min-h-screen pb-20 md:pb-10">
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/60 border-b border-white/5">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
