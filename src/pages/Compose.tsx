@@ -75,7 +75,7 @@ export default function Compose() {
         user_id: user.id, content: content.trim() || null, media_url, media_kind, audience,
       });
       if (error) throw error;
-      toast.success(isVideo ? "Posted — auto-deletes in 30 min" : "Posted");
+      toast.success(isVideo ? "Posted — auto-deletes in 3 days" : "Posted");
       navigate("/");
     } catch (e: any) {
       toast.error(e.message || "Failed to post");
@@ -104,7 +104,7 @@ export default function Compose() {
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="What's happening? Videos need #ndere"
+          placeholder="What's happening? Use @ to mention. Videos need #ndere"
           maxLength={500}
           autoFocus
           className="glass-input resize-none min-h-[140px] text-base border-0 focus-visible:ring-1 focus-visible:ring-primary/40"
@@ -122,7 +122,7 @@ export default function Compose() {
             </button>
             {file?.type.startsWith("video") && (
               <div className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-background/70 backdrop-blur-md text-accent">
-                30 min lifespan
+                3 day lifespan
               </div>
             )}
           </div>

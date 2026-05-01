@@ -1,12 +1,25 @@
-import { useState } from "react";
-import { Film, Image as ImageIcon, FileText, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Film, FileText, X, Eye } from "lucide-react";
 import { PostCard, type Post } from "./PostCard";
 
 type Props = { posts: Post[]; onChange: () => void };
 
 export const PostsGrid = ({ posts, onChange }: Props) => {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
   const open = posts.find((p) => p.id === openId);
+
+  useEffect(() => {
+    if (posts.length === 0) return;
+    (async () => {
+      const ids = posts.map((p) => p.id);
+      const { data } = await supabase.from("post_views").select("post_id").in("post_id", ids);
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((r: any) => { counts[r.post_id] = (counts[r.post_id] ?? 0) + 1; });
+      setViewCounts(counts);
+    })();
+  }, [posts.map((p) => p.id).join(",")]);
 
   if (posts.length === 0) {
     return (
@@ -41,6 +54,11 @@ export const PostsGrid = ({ posts, onChange }: Props) => {
                 <FileText className="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-muted-foreground" />
               </div>
             )}
+            {/* Views overlay */}
+            <div className="absolute bottom-1 left-1 inline-flex items-center gap-0.5 text-[10px] text-white px-1.5 py-0.5 rounded-full bg-black/55 backdrop-blur-sm">
+              <Eye className="w-3 h-3" />
+              <span className="font-semibold">{viewCounts[p.id] ?? 0}</span>
+            </div>
           </button>
         ))}
       </div>
@@ -50,7 +68,7 @@ export const PostsGrid = ({ posts, onChange }: Props) => {
           className="fixed inset-0 z-[70] bg-background/80 backdrop-blur-md overflow-y-auto animate-fade-in"
           onClick={() => setOpenId(null)}
         >
-          <div className="min-h-full flex items-start justify-center p-4 pt-16">
+          <div className="min-h-full flex items-start justify-center p-4 pt-16 pb-24">
             <div
               className="w-full max-w-xl glass-strong rounded-3xl overflow-hidden relative"
               onClick={(e) => e.stopPropagation()}

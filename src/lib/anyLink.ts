@@ -44,7 +44,8 @@ export const parseAnyVideoLink = (raw: string): ParsedLink | null => {
     };
     const v = u.pathname.match(/\/v\/(\d+)/);
     if (v) return { platform: "tiktok", embed_url: `https://www.tiktok.com/embed/v2/${v[1]}`, video_id: v[1], author_handle: null };
-    // short link — we can't resolve sync; let caller fallback to generic embed
+    // Short links (vm.tiktok.com / vt.tiktok.com / t/...) — fall through to generic iframe of the URL
+    return { platform: "tiktok", embed_url: u.toString(), video_id: u.toString(), author_handle: null };
   }
 
   // Instagram (reel/p/tv)

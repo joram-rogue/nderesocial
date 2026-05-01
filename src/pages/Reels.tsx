@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import logo from "@/assets/ndere-logo.png";
 
 type FeedItem =
-  | { kind: "external"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string; platform: string; embed_url: string | null }
+  | { kind: "external"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string; platform: string; embed_url: string | null; expires_at: string | null }
   | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null; expires_at: string | null };
 
 const expiryLabel = (iso: string) => {
@@ -51,7 +51,10 @@ export default function Reels() {
   const load = async () => {
     const nowIso = new Date().toISOString();
     const [tt, ur] = await Promise.all([
-      supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url").order("created_at", { ascending: false }),
+      supabase.from("tiktok_reels")
+        .select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url,expires_at")
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order("created_at", { ascending: false }),
       supabase.from("user_reels")
         .select("id,video_url,caption,user_id,filter_css,expires_at")
         .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
@@ -125,10 +128,10 @@ export default function Reels() {
     }
     const { error } = await supabase.from("tiktok_reels").insert(rows);
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(`Couldn't add: ${error.message}`); return; }
     setBulk("");
     setComposerOpen(false);
-    toast.success(`Added ${rows.length}${skipped.length ? ` · skipped ${skipped.length}` : ""}`);
+    toast.success(`Added ${rows.length}${skipped.length ? ` · skipped ${skipped.length}` : ""} · expires in 30 min`);
     load();
   };
 
@@ -236,7 +239,7 @@ export default function Reels() {
       {user && !cameraOpen && !pendingCaption && (
         <button
           onClick={() => setCameraOpen(true)}
-          className="fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[var(--shadow-warm)] hover:scale-110 transition-transform"
+          className="fixed right-4 bottom-20 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[var(--shadow-warm)] hover:scale-110 transition-transform"
           aria-label="Record reel"
         >
           <Video className="w-6 h-6" />
@@ -385,7 +388,7 @@ export default function Reels() {
                       {item.kind === "user" && item.caption && (
                         <div className="text-[12px] text-white/85 drop-shadow line-clamp-2 mt-0.5">{item.caption}</div>
                       )}
-                      {item.kind === "user" && item.expires_at && (
+                      {item.expires_at && (
                         <div className="mt-1.5 inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/20 text-accent backdrop-blur-md pointer-events-auto">
                           {expiryLabel(item.expires_at)}
                         </div>
@@ -401,26 +404,28 @@ export default function Reels() {
         </div>
       )}
 
-      {/* Bottom nav */}
+      {/* Bottom nav (docked) */}
       {user && (
-        <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 bg-black/50 backdrop-blur-xl border border-white/10 rounded-full px-2 py-2 flex gap-1 shadow-2xl">
-          {[
-            { to: "/", icon: Home, end: true },
-            { to: "/reels", icon: Film },
-            { to: "/chat", icon: MessageCircle },
-            { to: "/account", icon: User },
-          ].map(({ to, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `p-3 rounded-full transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-white/70 hover:text-white"}`
-              }
-            >
-              <Icon className="w-5 h-5" />
-            </NavLink>
-          ))}
+        <nav className="fixed bottom-0 inset-x-0 z-30 bg-black/85 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
+          <div className="max-w-2xl mx-auto grid grid-cols-4 h-16">
+            {[
+              { to: "/", icon: Home, end: true },
+              { to: "/reels", icon: Film },
+              { to: "/chat", icon: MessageCircle },
+              { to: "/account", icon: User },
+            ].map(({ to, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `flex items-center justify-center transition-colors ${isActive ? "text-primary" : "text-white/70 hover:text-white"}`
+                }
+              >
+                <Icon className="w-6 h-6" />
+              </NavLink>
+            ))}
+          </div>
         </nav>
       )}
     </div>
