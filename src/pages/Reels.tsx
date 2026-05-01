@@ -51,7 +51,10 @@ export default function Reels() {
   const load = async () => {
     const nowIso = new Date().toISOString();
     const [tt, ur] = await Promise.all([
-      supabase.from("tiktok_reels").select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url").order("created_at", { ascending: false }),
+      supabase.from("tiktok_reels")
+        .select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url,expires_at")
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order("created_at", { ascending: false }),
       supabase.from("user_reels")
         .select("id,video_url,caption,user_id,filter_css,expires_at")
         .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
