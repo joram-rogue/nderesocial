@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -9,20 +9,24 @@ import { type Post } from "@/components/PostCard";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { InviteSheet } from "@/components/InviteSheet";
 import { StoriesStrip } from "@/components/StoriesStrip";
+import { ThemeSettings } from "@/components/ThemeSettings";
 import { fetchPostsWithProfiles } from "@/lib/posts";
-import { Pencil, Moon, Sun, Share2, Radio, UserPlus, UserCheck } from "lucide-react";
+import { notify } from "@/hooks/useNotifications";
+import { Pencil, Palette, Share2, Radio, UserPlus, UserCheck, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Account() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { theme, toggle } = useTheme();
+  useTheme();
   const targetId = id || user?.id;
   const isSelf = !id || id === user?.id;
   const [profile, setProfile] = useState<{ display_name: string; bio: string | null; avatar_url: string | null } | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [role, setRole] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const [followers, setFollowers] = useState(0);
@@ -74,9 +78,17 @@ export default function Account() {
     } else {
       const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
       if (error) toast.error(error.message);
-      else { setIFollow(true); setFollowers((n) => n + 1); }
+      else {
+        setIFollow(true); setFollowers((n) => n + 1);
+        notify({ user_id: targetId, actor_id: user.id, type: "follow" }).catch(() => {});
+      }
     }
     setFollowBusy(false);
+  };
+
+  const messageUser = () => {
+    if (!targetId) return;
+    navigate(`/chat?dm=${targetId}`);
   };
 
   return (
