@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon, Film, X, Send, Camera, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { CameraCapture } from "@/components/CameraCapture";
+import { notifyFollowers } from "@/hooks/useNotifications";
 
 type Audience = "all" | "staff" | "troupe";
 
@@ -71,10 +72,13 @@ export default function Compose() {
         if (upErr) throw upErr;
         media_url = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
       }
-      const { error } = await supabase.from("posts").insert({
+      const { data: inserted, error } = await supabase.from("posts").insert({
         user_id: user.id, content: content.trim() || null, media_url, media_kind, audience,
-      });
+      }).select("id").maybeSingle();
       if (error) throw error;
+      if (inserted?.id && audience === "all") {
+        notifyFollowers(user.id, "post", inserted.id).catch(() => {});
+      }
       toast.success(isVideo ? "Posted — auto-deletes in 3 days" : "Posted");
       navigate("/");
     } catch (e: any) {
