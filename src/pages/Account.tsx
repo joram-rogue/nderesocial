@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -9,20 +9,24 @@ import { type Post } from "@/components/PostCard";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { InviteSheet } from "@/components/InviteSheet";
 import { StoriesStrip } from "@/components/StoriesStrip";
+import { ThemeSettings } from "@/components/ThemeSettings";
 import { fetchPostsWithProfiles } from "@/lib/posts";
-import { Pencil, Moon, Sun, Share2, Radio, UserPlus, UserCheck } from "lucide-react";
+import { notify } from "@/hooks/useNotifications";
+import { Pencil, Palette, Share2, Radio, UserPlus, UserCheck, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Account() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { theme, toggle } = useTheme();
+  useTheme();
   const targetId = id || user?.id;
   const isSelf = !id || id === user?.id;
   const [profile, setProfile] = useState<{ display_name: string; bio: string | null; avatar_url: string | null } | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [role, setRole] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const [followers, setFollowers] = useState(0);
@@ -74,9 +78,17 @@ export default function Account() {
     } else {
       const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
       if (error) toast.error(error.message);
-      else { setIFollow(true); setFollowers((n) => n + 1); }
+      else {
+        setIFollow(true); setFollowers((n) => n + 1);
+        notify({ user_id: targetId, actor_id: user.id, type: "follow" }).catch(() => {});
+      }
     }
     setFollowBusy(false);
+  };
+
+  const messageUser = () => {
+    if (!targetId) return;
+    navigate(`/chat?dm=${targetId}`);
   };
 
   return (
@@ -100,8 +112,8 @@ export default function Account() {
           </div>
           {isSelf && (
             <div className="flex items-center gap-2">
-              <button onClick={toggle} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Toggle theme" title={theme === "midnight" ? "Switch to Coffee" : "Switch to Midnight"}>
-                {theme === "midnight" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              <button onClick={() => setThemeOpen(true)} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Theme & wallpaper" title="Theme, wallpaper & font">
+                <Palette className="w-4 h-4" />
               </button>
               <button onClick={() => setEditing(true)} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Edit">
                 <Pencil className="w-4 h-4" />
@@ -123,15 +135,23 @@ export default function Account() {
         {/* Action row */}
         <div className="mt-5 flex flex-wrap gap-2">
           {!isSelf && user && (
-            <button
-              onClick={toggleFollow}
-              disabled={followBusy}
-              className={`flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-                iFollow ? "glass text-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"
-              }`}
-            >
-              {iFollow ? <><UserCheck className="w-4 h-4" /> Following</> : <><UserPlus className="w-4 h-4" /> Follow</>}
-            </button>
+            <>
+              <button
+                onClick={toggleFollow}
+                disabled={followBusy}
+                className={`flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
+                  iFollow ? "glass text-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"
+                }`}
+              >
+                {iFollow ? <><UserCheck className="w-4 h-4" /> Following</> : <><UserPlus className="w-4 h-4" /> Follow</>}
+              </button>
+              <button
+                onClick={messageUser}
+                className="flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold glass hover:bg-primary/10 text-primary"
+              >
+                <MessageCircle className="w-4 h-4" /> Message
+              </button>
+            </>
           )}
           {isSelf && (
             <Link to="/live" className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors">
@@ -161,6 +181,7 @@ export default function Account() {
         <ProfileEditor initial={profile} onSaved={load} onClose={() => setEditing(false)} />
       )}
       {inviteOpen && <InviteSheet onClose={() => setInviteOpen(false)} />}
+      {themeOpen && <ThemeSettings onClose={() => setThemeOpen(false)} />}
     </Layout>
   );
 }

@@ -13,6 +13,7 @@ import Live from "./pages/Live";
 import NotFound from "./pages/NotFound";
 import { AutoFixOverlay } from "./components/AutoFixOverlay";
 import { InstallPrompt } from "./components/InstallPrompt";
+import { NotificationsBoot } from "./components/NotificationsBoot";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
       <InstallPrompt />
       <BrowserRouter>
         <AuthProvider>
+          <NotificationsBoot />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />

@@ -6,6 +6,7 @@ import { Watermark } from "./Watermark";
 import { downloadFile, downloadImageWithWatermark, downloadText } from "@/lib/download";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { notify } from "@/hooks/useNotifications";
 
 export type Post = {
   id: string;
@@ -115,6 +116,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
       await supabase.from("likes").delete().eq("post_id", post.id).eq("user_id", user.id);
     } else {
       await supabase.from("likes").insert({ post_id: post.id, user_id: user.id });
+      notify({ user_id: post.user_id, actor_id: user.id, type: "like", post_id: post.id }).catch(() => {});
     }
   };
 
@@ -156,6 +158,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
       post_id: post.id, user_id: user.id, content: text.trim(), parent_id,
     });
     if (error) { toast.error(error.message); return; }
+    notify({ user_id: post.user_id, actor_id: user.id, type: "comment", post_id: post.id }).catch(() => {});
     if (parent_id) { setReplyText(""); setReplyTo(null); } else { setNewComment(""); setEmojiOpen(false); }
     loadAll();
   };

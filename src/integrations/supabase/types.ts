@@ -40,6 +40,8 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          media_kind: string | null
+          media_url: string | null
           room: Database["public"]["Enums"]["post_audience"]
           user_id: string
           voice_url: string | null
@@ -48,6 +50,8 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          media_kind?: string | null
+          media_url?: string | null
           room?: Database["public"]["Enums"]["post_audience"]
           user_id: string
           voice_url?: string | null
@@ -56,6 +60,8 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          media_kind?: string | null
+          media_url?: string | null
           room?: Database["public"]["Enums"]["post_audience"]
           user_id?: string
           voice_url?: string | null
@@ -109,6 +115,8 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          media_kind: string | null
+          media_url: string | null
           recipient_id: string
           sender_id: string
           voice_url: string | null
@@ -117,6 +125,8 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          media_kind?: string | null
+          media_url?: string | null
           recipient_id: string
           sender_id: string
           voice_url?: string | null
@@ -125,6 +135,8 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          media_kind?: string | null
+          media_url?: string | null
           recipient_id?: string
           sender_id?: string
           voice_url?: string | null
@@ -180,6 +192,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          post_id: string | null
+          read: boolean
+          type: string
+          user_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          read?: boolean
+          type: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          read?: boolean
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       post_views: {
         Row: {
