@@ -112,8 +112,8 @@ export default function Account() {
           </div>
           {isSelf && (
             <div className="flex items-center gap-2">
-              <button onClick={toggle} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Toggle theme" title={theme === "midnight" ? "Switch to Coffee" : "Switch to Midnight"}>
-                {theme === "midnight" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              <button onClick={() => setThemeOpen(true)} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Theme & wallpaper" title="Theme, wallpaper & font">
+                <Palette className="w-4 h-4" />
               </button>
               <button onClick={() => setEditing(true)} className="p-2.5 rounded-xl glass hover:bg-primary/10 text-primary" aria-label="Edit">
                 <Pencil className="w-4 h-4" />
@@ -135,15 +135,23 @@ export default function Account() {
         {/* Action row */}
         <div className="mt-5 flex flex-wrap gap-2">
           {!isSelf && user && (
-            <button
-              onClick={toggleFollow}
-              disabled={followBusy}
-              className={`flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-                iFollow ? "glass text-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"
-              }`}
-            >
-              {iFollow ? <><UserCheck className="w-4 h-4" /> Following</> : <><UserPlus className="w-4 h-4" /> Follow</>}
-            </button>
+            <>
+              <button
+                onClick={toggleFollow}
+                disabled={followBusy}
+                className={`flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
+                  iFollow ? "glass text-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"
+                }`}
+              >
+                {iFollow ? <><UserCheck className="w-4 h-4" /> Following</> : <><UserPlus className="w-4 h-4" /> Follow</>}
+              </button>
+              <button
+                onClick={messageUser}
+                className="flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold glass hover:bg-primary/10 text-primary"
+              >
+                <MessageCircle className="w-4 h-4" /> Message
+              </button>
+            </>
           )}
           {isSelf && (
             <Link to="/live" className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors">
