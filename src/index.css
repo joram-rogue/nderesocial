@@ -110,6 +110,20 @@
   }
 
   h1, h2, h3, h4, h5 { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+
+  /* System font override (uses the device's default fonts) */
+  html.font-system body,
+  html.font-system h1,
+  html.font-system h2,
+  html.font-system h3,
+  html.font-system h4,
+  html.font-system h5,
+  html.font-system input,
+  html.font-system textarea,
+  html.font-system button {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    letter-spacing: normal;
+  }
 }
 
 @layer components {
