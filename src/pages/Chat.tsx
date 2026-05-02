@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme, wallpaperCss } from "@/hooks/useTheme";
 import { Layout } from "@/components/Layout";
-import { Mic, Send, Square, Play, Pause, ArrowLeft, Users, MessageSquare } from "lucide-react";
+import { ThemeSettings } from "@/components/ThemeSettings";
+import { Mic, Send, Square, Play, Pause, ArrowLeft, Users, MessageSquare, Image as ImageIcon, Film, X, Palette } from "lucide-react";
 import { toast } from "sonner";
 
 type Room = "all" | "staff" | "troupe";
 type RoomMsg = {
-  id: string; user_id: string; room: Room; content: string | null; voice_url: string | null; created_at: string;
+  id: string; user_id: string; room: Room; content: string | null; voice_url: string | null;
+  media_url: string | null; media_kind: string | null; created_at: string;
   profile?: { display_name: string; avatar_url: string | null };
 };
 type DM = {
-  id: string; sender_id: string; recipient_id: string; content: string | null; voice_url: string | null; created_at: string;
+  id: string; sender_id: string; recipient_id: string; content: string | null; voice_url: string | null;
+  media_url: string | null; media_kind: string | null; created_at: string;
 };
 type Profile = { id: string; display_name: string; avatar_url: string | null };
 
@@ -45,6 +50,8 @@ type Mode = { kind: "room"; room: Room } | { kind: "dm"; peer: Profile } | { kin
 
 export default function Chat() {
   const { user } = useAuth();
+  const { wallpaper } = useTheme();
+  const [params, setParams] = useSearchParams();
   const [mode, setMode] = useState<Mode>({ kind: "room", room: "all" });
   const [messages, setMessages] = useState<(RoomMsg | DM)[]>([]);
   const [contacts, setContacts] = useState<Profile[]>([]);
@@ -52,11 +59,17 @@ export default function Chat() {
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  const wallpaperBg = wallpaperCss(wallpaper);
 
   // Load all members as contacts (excluding self)
   const loadContacts = async () => {
@@ -65,6 +78,19 @@ export default function Chat() {
     setContacts((data ?? []) as Profile[]);
   };
   useEffect(() => { loadContacts(); /* eslint-disable-next-line */ }, [user?.id]);
+
+  // Honor ?dm=<userId> deep link from profile pages
+  useEffect(() => {
+    const dmId = params.get("dm");
+    if (!dmId || !user) return;
+    (async () => {
+      const { data } = await supabase.from("profiles").select("id,display_name,avatar_url").eq("id", dmId).maybeSingle();
+      if (data) setMode({ kind: "dm", peer: data as Profile });
+      params.delete("dm");
+      setParams(params, { replace: true });
+    })();
+    // eslint-disable-next-line
+  }, [params, user?.id]);
 
   const load = async () => {
     if (!user) return;
@@ -110,15 +136,20 @@ export default function Chat() {
     // eslint-disable-next-line
   }, [mode]);
 
-  const send = async () => {
-    if (!user || !text.trim()) return;
+  const sendPayload = async (payload: { content?: string; voice_url?: string; media_url?: string; media_kind?: "photo" | "video" }) => {
+    if (!user) return;
     if (mode.kind === "room") {
-      const { error } = await supabase.from("chat_messages").insert({ room: mode.room, user_id: user.id, content: text.trim() });
-      if (error) { toast.error(error.message); return; }
+      const { error } = await supabase.from("chat_messages").insert({ room: mode.room, user_id: user.id, ...payload });
+      if (error) toast.error(error.message);
     } else if (mode.kind === "dm") {
-      const { error } = await supabase.from("direct_messages").insert({ sender_id: user.id, recipient_id: mode.peer.id, content: text.trim() });
-      if (error) { toast.error(error.message); return; }
+      const { error } = await supabase.from("direct_messages").insert({ sender_id: user.id, recipient_id: mode.peer.id, ...payload });
+      if (error) toast.error(error.message);
     }
+  };
+
+  const send = async () => {
+    if (!text.trim()) return;
+    await sendPayload({ content: text.trim() });
     setText("");
   };
 
@@ -155,13 +186,31 @@ export default function Chat() {
     const { error: upErr } = await supabase.storage.from("voice-notes").upload(path, blob, { contentType: "audio/webm" });
     if (upErr) { toast.error(upErr.message); return; }
     const url = supabase.storage.from("voice-notes").getPublicUrl(path).data.publicUrl;
-    if (mode.kind === "room") {
-      const { error } = await supabase.from("chat_messages").insert({ room: mode.room, user_id: user.id, voice_url: url });
-      if (error) toast.error(error.message);
-    } else if (mode.kind === "dm") {
-      const { error } = await supabase.from("direct_messages").insert({ sender_id: user.id, recipient_id: mode.peer.id, voice_url: url });
-      if (error) toast.error(error.message);
+    await sendPayload({ voice_url: url });
+  };
+
+  const uploadMedia = async (file: File, kind: "photo" | "video") => {
+    if (!user) return;
+    if (file.size > 50 * 1024 * 1024) { toast.error("Max 50MB"); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || (kind === "video" ? "mp4" : "jpg");
+      const path = `${user.id}/chat/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
+      if (error) throw error;
+      const url = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+      await sendPayload({ media_url: url, media_kind: kind });
+    } catch (e: any) {
+      toast.error(e.message || "Upload failed");
+    } finally { setUploading(false); }
+  };
+
+  const renderMedia = (m: RoomMsg | DM) => {
+    if (!m.media_url) return null;
+    if (m.media_kind === "video") {
+      return <video src={m.media_url} controls className="rounded-xl max-h-72 max-w-full bg-black" />;
     }
+    return <img src={m.media_url} alt="" className="rounded-xl max-h-72 max-w-full object-cover" />;
   };
 
   // ---------- Contacts list view ----------
@@ -196,7 +245,7 @@ export default function Chat() {
   // ---------- Chat view (room or DM) ----------
   return (
     <Layout>
-      {/* Header: room tabs + DMs button, OR DM header with back button */}
+      {/* Header */}
       {mode.kind === "room" ? (
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex gap-1 p-1 glass-strong rounded-full">
@@ -208,38 +257,53 @@ export default function Chat() {
               </button>
             ))}
           </div>
-          <button onClick={() => setMode({ kind: "contacts" })}
-            className="p-2 rounded-full glass-strong hover:bg-white/10 transition-colors" aria-label="Contacts">
-            <Users className="w-4 h-4" />
-          </button>
+          <div className="flex gap-1.5">
+            <button onClick={() => setThemeOpen(true)} className="p-2 rounded-full glass-strong hover:bg-white/10" aria-label="Theme & wallpaper" title="Theme & wallpaper">
+              <Palette className="w-4 h-4" />
+            </button>
+            <button onClick={() => setMode({ kind: "contacts" })} className="p-2 rounded-full glass-strong hover:bg-white/10" aria-label="Contacts">
+              <Users className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="flex items-center gap-3 mb-3 glass-strong rounded-full p-2 pr-4">
+        <div className="flex items-center gap-3 mb-3 glass-strong rounded-full p-2 pr-3">
           <button onClick={() => setMode({ kind: "contacts" })} className="p-1.5 rounded-full hover:bg-white/5">
             <ArrowLeft className="w-4 h-4" />
           </button>
           <Avatar url={mode.peer.avatar_url} name={mode.peer.display_name} size={32} />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="font-semibold text-sm truncate">{mode.peer.display_name}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Direct message</p>
           </div>
+          <button onClick={() => setThemeOpen(true)} className="p-1.5 rounded-full hover:bg-white/5" aria-label="Wallpaper" title="Wallpaper">
+            <Palette className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      <div ref={listRef} className="glass rounded-3xl p-4 h-[calc(100vh-280px)] overflow-y-auto space-y-3 mb-3">
+      {/* Messages list with optional wallpaper */}
+      <div
+        ref={listRef}
+        className="rounded-3xl p-4 h-[calc(100vh-280px)] overflow-y-auto space-y-3 mb-3 border border-border/40"
+        style={wallpaperBg ? { background: wallpaperBg } : { background: "hsl(var(--glass-bg))" }}
+      >
         {messages.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground py-10">Say hi</p>
         ) : messages.map((m) => {
           const senderId = "user_id" in m ? m.user_id : m.sender_id;
           const mine = senderId === user?.id;
-          const prof = mode.kind === "room" ? (m as RoomMsg).profile : (mode.kind === "dm" ? mode.peer : null);
+          const prof = mode.kind === "room" ? (m as RoomMsg).profile : (mode.kind === "dm" ? (mine ? null : mode.peer) : null);
           return (
             <div key={m.id} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}>
               {!mine && <Avatar url={prof?.avatar_url} name={prof?.display_name} size={32} />}
-              <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 ${mine ? "bg-primary text-primary-foreground" : "glass-strong"}`}>
-                {!mine && mode.kind === "room" && (
-                  <p className="text-[10px] font-semibold text-accent mb-0.5">{(m as RoomMsg).profile?.display_name ?? "User"}</p>
+              <div className={`max-w-[78%] rounded-2xl px-3 py-2 ${mine ? "bg-primary text-primary-foreground" : "glass-strong"}`}>
+                {!mine && (
+                  <p className="text-[10px] font-semibold text-accent mb-0.5 truncate">
+                    {mode.kind === "room" ? ((m as RoomMsg).profile?.display_name ?? "User") : mode.peer.display_name}
+                  </p>
                 )}
+                {m.media_url && <div className="mb-1">{renderMedia(m)}</div>}
                 {m.content && <p className="text-sm break-words whitespace-pre-wrap">{m.content}</p>}
                 {m.voice_url && <VoicePlayer url={m.voice_url} />}
               </div>
@@ -248,6 +312,7 @@ export default function Chat() {
         })}
       </div>
 
+      {/* Composer */}
       <div className="flex gap-2 items-center">
         {recording ? (
           <div className="flex-1 flex items-center gap-3 glass-input rounded-full px-4 py-3">
@@ -256,9 +321,17 @@ export default function Chat() {
             <span className="text-xs text-muted-foreground ml-auto">Recording…</span>
           </div>
         ) : (
-          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Message…" maxLength={500}
-            className="flex-1 glass-input rounded-full px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+          <div className="flex-1 flex items-center gap-1 glass-input rounded-full pl-2 pr-3">
+            <button onClick={() => photoInputRef.current?.click()} className="p-2 rounded-full hover:bg-white/5 text-primary" aria-label="Photo" disabled={uploading}>
+              <ImageIcon className="w-4 h-4" />
+            </button>
+            <button onClick={() => videoInputRef.current?.click()} className="p-2 rounded-full hover:bg-white/5 text-primary" aria-label="Video" disabled={uploading}>
+              <Film className="w-4 h-4" />
+            </button>
+            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+              placeholder={uploading ? "Uploading…" : "Message…"} maxLength={500} disabled={uploading}
+              className="flex-1 bg-transparent py-3 text-sm focus:outline-none" />
+          </div>
         )}
         {text.trim() && !recording ? (
           <button onClick={send} className="p-3 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[var(--shadow-warm)]">
@@ -271,6 +344,13 @@ export default function Chat() {
           </button>
         )}
       </div>
+
+      <input ref={photoInputRef} type="file" accept="image/*" hidden
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMedia(f, "photo"); e.target.value = ""; }} />
+      <input ref={videoInputRef} type="file" accept="video/*" hidden
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMedia(f, "video"); e.target.value = ""; }} />
+
+      {themeOpen && <ThemeSettings onClose={() => setThemeOpen(false)} />}
     </Layout>
   );
 }
