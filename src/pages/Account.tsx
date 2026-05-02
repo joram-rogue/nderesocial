@@ -181,6 +181,7 @@ export default function Account() {
         <ProfileEditor initial={profile} onSaved={load} onClose={() => setEditing(false)} />
       )}
       {inviteOpen && <InviteSheet onClose={() => setInviteOpen(false)} />}
+      {themeOpen && <ThemeSettings onClose={() => setThemeOpen(false)} />}
     </Layout>
   );
 }
