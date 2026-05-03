@@ -257,8 +257,11 @@ export default function Chat() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-background"
-      style={wallpaperBg ? { background: wallpaperBg } : undefined}
+      className="fixed inset-x-0 top-0 z-50 flex flex-col bg-background"
+      style={{
+        height: "100dvh",
+        ...(wallpaperBg ? { background: wallpaperBg } : {}),
+      }}
     >
       {/* Header */}
       <header className="shrink-0 backdrop-blur-xl bg-background/70 border-b border-border/40 pt-[env(safe-area-inset-top)]">
