@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 
 export type Theme = "coffee" | "midnight";
 export type FontMode = "app" | "system";
@@ -34,27 +34,35 @@ export const wallpaperCss = (id: string): string => {
   return WALLPAPER_PRESETS.find((p) => p.id === id)?.css ?? "";
 };
 
+// ---------- Tiny global store so all components react to changes ----------
+type Snap = { theme: Theme; fontMode: FontMode; wallpaper: string };
+const read = (): Snap => ({
+  theme: (typeof localStorage !== "undefined" && (localStorage.getItem(THEME_KEY) as Theme)) || "coffee",
+  fontMode: (typeof localStorage !== "undefined" && (localStorage.getItem(FONT_KEY) as FontMode)) || "app",
+  wallpaper: (typeof localStorage !== "undefined" && localStorage.getItem(WALL_KEY)) || "",
+});
+
+let snap: Snap = read();
+const subs = new Set<() => void>();
+const emit = () => { snap = read(); subs.forEach((f) => f()); };
+const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
+const getSnap = () => snap;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === THEME_KEY || e.key === FONT_KEY || e.key === WALL_KEY) emit();
+  });
+}
+
 export const useTheme = () => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "coffee";
-    return (localStorage.getItem(THEME_KEY) as Theme) || "coffee";
-  });
-  const [fontMode, setFontModeState] = useState<FontMode>(() => {
-    if (typeof window === "undefined") return "app";
-    return (localStorage.getItem(FONT_KEY) as FontMode) || "app";
-  });
-  const [wallpaper, setWallpaperState] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    return localStorage.getItem(WALL_KEY) || "";
-  });
+  const s = useSyncExternalStore(subscribe, getSnap, getSnap);
+  useEffect(() => { apply(s.theme); }, [s.theme]);
+  useEffect(() => { applyFont(s.fontMode); }, [s.fontMode]);
 
-  useEffect(() => { apply(theme); }, [theme]);
-  useEffect(() => { applyFont(fontMode); }, [fontMode]);
+  const setTheme = useCallback((t: Theme) => { localStorage.setItem(THEME_KEY, t); emit(); }, []);
+  const toggle = useCallback(() => { setTheme(s.theme === "coffee" ? "midnight" : "coffee"); }, [s.theme, setTheme]);
+  const setFontMode = useCallback((m: FontMode) => { localStorage.setItem(FONT_KEY, m); emit(); }, []);
+  const setWallpaper = useCallback((w: string) => { localStorage.setItem(WALL_KEY, w); emit(); }, []);
 
-  const setTheme = useCallback((t: Theme) => { localStorage.setItem(THEME_KEY, t); setThemeState(t); }, []);
-  const toggle = useCallback(() => { setTheme(theme === "coffee" ? "midnight" : "coffee"); }, [theme, setTheme]);
-  const setFontMode = useCallback((m: FontMode) => { localStorage.setItem(FONT_KEY, m); setFontModeState(m); }, []);
-  const setWallpaper = useCallback((w: string) => { localStorage.setItem(WALL_KEY, w); setWallpaperState(w); }, []);
-
-  return { theme, setTheme, toggle, fontMode, setFontMode, wallpaper, setWallpaper };
+  return { theme: s.theme, setTheme, toggle, fontMode: s.fontMode, setFontMode, wallpaper: s.wallpaper, setWallpaper };
 };
