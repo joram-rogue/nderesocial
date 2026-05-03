@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
+import { useEffect, useCallback, useSyncExternalStore } from "react";
 
 export type Theme = "coffee" | "midnight";
 export type FontMode = "app" | "system";
