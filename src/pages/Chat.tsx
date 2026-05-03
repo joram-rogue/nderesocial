@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme, wallpaperCss } from "@/hooks/useTheme";
 import { Layout } from "@/components/Layout";
 import { ThemeSettings } from "@/components/ThemeSettings";
-import { Mic, Send, Square, Play, Pause, ArrowLeft, Users, MessageSquare, Image as ImageIcon, Film, X, Palette } from "lucide-react";
+import { Mic, Send, Square, Play, Pause, ArrowLeft, Users, MessageSquare, Image as ImageIcon, Film, Palette } from "lucide-react";
 import { toast } from "sonner";
 
 type Room = "all" | "staff" | "troupe";
@@ -50,12 +50,12 @@ type Mode = { kind: "room"; room: Room } | { kind: "dm"; peer: Profile } | { kin
 
 export default function Chat() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { wallpaper } = useTheme();
   const [params, setParams] = useSearchParams();
-  const [mode, setMode] = useState<Mode>({ kind: "room", room: "all" });
+  const [mode, setMode] = useState<Mode>({ kind: "contacts" });
   const [messages, setMessages] = useState<(RoomMsg | DM)[]>([]);
   const [contacts, setContacts] = useState<Profile[]>([]);
-  const [profileMap, setProfileMap] = useState<Map<string, Profile>>(new Map());
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
@@ -71,7 +71,6 @@ export default function Chat() {
 
   const wallpaperBg = wallpaperCss(wallpaper);
 
-  // Load all members as contacts (excluding self)
   const loadContacts = async () => {
     if (!user) return;
     const { data } = await supabase.from("profiles").select("id,display_name,avatar_url").neq("id", user.id).order("display_name");
@@ -79,7 +78,7 @@ export default function Chat() {
   };
   useEffect(() => { loadContacts(); /* eslint-disable-next-line */ }, [user?.id]);
 
-  // Honor ?dm=<userId> deep link from profile pages
+  // ?dm=<userId> deep link
   useEffect(() => {
     const dmId = params.get("dm");
     if (!dmId || !user) return;
@@ -100,7 +99,6 @@ export default function Chat() {
       const ids = [...new Set(data.map((m) => m.user_id))];
       const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url").in("id", ids);
       const m = new Map((profs ?? []).map((p) => [p.id, p as Profile]));
-      setProfileMap(m);
       setMessages(data.map((x) => ({ ...x, profile: m.get(x.user_id) })) as RoomMsg[]);
       setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }), 50);
     } else if (mode.kind === "dm") {
@@ -112,10 +110,8 @@ export default function Chat() {
       setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }), 50);
     }
   };
-
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [mode]);
 
-  // Realtime
   useEffect(() => {
     if (!user) return;
     if (mode.kind === "room") {
@@ -213,23 +209,34 @@ export default function Chat() {
     return <img src={m.media_url} alt="" className="rounded-xl max-h-72 max-w-full object-cover" />;
   };
 
-  // ---------- Contacts list view ----------
+  // ---------- Inbox / contacts list (uses normal Layout, list style not tiles) ----------
   if (mode.kind === "contacts") {
     return (
       <Layout>
-        <div className="flex items-center gap-2 mb-3">
-          <button onClick={() => setMode({ kind: "room", room: "all" })} className="p-2 rounded-full hover:bg-white/5">
-            <ArrowLeft className="w-4 h-4" />
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <h2 className="font-display font-bold text-lg">Messages</h2>
+          <button onClick={() => setThemeOpen(true)} className="p-2 rounded-full glass-strong hover:bg-white/10" aria-label="Theme & wallpaper" title="Theme & wallpaper">
+            <Palette className="w-4 h-4" />
           </button>
-          <h2 className="font-display font-bold text-lg">Direct messages</h2>
         </div>
-        <div className="glass rounded-3xl p-2 space-y-1 max-h-[calc(100vh-220px)] overflow-y-auto">
+
+        {/* Rooms quick row */}
+        <div className="flex gap-2 mb-3">
+          {(["all", "staff", "troupe"] as Room[]).map((r) => (
+            <button key={r} onClick={() => setMode({ kind: "room", room: r })}
+              className="flex-1 glass-strong rounded-2xl py-2.5 text-xs uppercase tracking-wider font-semibold hover:bg-primary/10">
+              # {r}
+            </button>
+          ))}
+        </div>
+
+        <div className="glass rounded-3xl p-1.5 divide-y divide-border/30">
           {contacts.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-10">No other members yet</p>
           ) : contacts.map((p) => (
             <button key={p.id} onClick={() => setMode({ kind: "dm", peer: p })}
-              className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors text-left">
-              <Avatar url={p.avatar_url} name={p.display_name} size={40} />
+              className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left first:rounded-t-2xl last:rounded-b-2xl">
+              <Avatar url={p.avatar_url} name={p.display_name} size={44} />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm truncate">{p.display_name}</p>
                 <p className="text-xs text-muted-foreground">Tap to chat</p>
@@ -238,111 +245,120 @@ export default function Chat() {
             </button>
           ))}
         </div>
+
+        {themeOpen && <ThemeSettings onClose={() => setThemeOpen(false)} />}
       </Layout>
     );
   }
 
-  // ---------- Chat view (room or DM) ----------
+  // ---------- Fullscreen WhatsApp-like conversation ----------
+  const isRoom = mode.kind === "room";
+  const headerTitle = isRoom ? `# ${mode.room}` : mode.peer.display_name;
+
   return (
-    <Layout>
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-background"
+      style={wallpaperBg ? { background: wallpaperBg } : undefined}
+    >
       {/* Header */}
-      {mode.kind === "room" ? (
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex gap-1 p-1 glass-strong rounded-full">
-            {(["all", "staff", "troupe"] as Room[]).map((r) => (
-              <button key={r} onClick={() => setMode({ kind: "room", room: r })}
-                className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-wider font-semibold transition-all
-                  ${mode.room === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                {r}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1.5">
-            <button onClick={() => setThemeOpen(true)} className="p-2 rounded-full glass-strong hover:bg-white/10" aria-label="Theme & wallpaper" title="Theme & wallpaper">
-              <Palette className="w-4 h-4" />
-            </button>
-            <button onClick={() => setMode({ kind: "contacts" })} className="p-2 rounded-full glass-strong hover:bg-white/10" aria-label="Contacts">
-              <Users className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3 mb-3 glass-strong rounded-full p-2 pr-3">
-          <button onClick={() => setMode({ kind: "contacts" })} className="p-1.5 rounded-full hover:bg-white/5">
-            <ArrowLeft className="w-4 h-4" />
+      <header className="shrink-0 backdrop-blur-xl bg-background/70 border-b border-border/40 pt-[env(safe-area-inset-top)]">
+        <div className="flex items-center gap-2 px-3 h-14">
+          <button onClick={() => setMode({ kind: "contacts" })} className="p-2 rounded-full hover:bg-white/10">
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <Avatar url={mode.peer.avatar_url} name={mode.peer.display_name} size={32} />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm truncate">{mode.peer.display_name}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Direct message</p>
+          {!isRoom && <Avatar url={mode.peer.avatar_url} name={mode.peer.display_name} size={36} />}
+          {isRoom && <div className="w-9 h-9 grid place-items-center rounded-full bg-primary/20 text-primary"><Users className="w-4 h-4" /></div>}
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate">{headerTitle}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              {isRoom ? "Group room" : "Direct message"}
+            </p>
           </div>
-          <button onClick={() => setThemeOpen(true)} className="p-1.5 rounded-full hover:bg-white/5" aria-label="Wallpaper" title="Wallpaper">
+          {isRoom && (
+            <div className="flex gap-1 p-1 glass rounded-full">
+              {(["all", "staff", "troupe"] as Room[]).map((r) => (
+                <button key={r} onClick={() => setMode({ kind: "room", room: r })}
+                  className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-semibold transition-all
+                    ${mode.room === r ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+          )}
+          <button onClick={() => setThemeOpen(true)} className="p-2 rounded-full hover:bg-white/10" aria-label="Wallpaper">
             <Palette className="w-4 h-4" />
           </button>
         </div>
-      )}
+      </header>
 
-      {/* Messages list with optional wallpaper */}
-      <div
-        ref={listRef}
-        className="rounded-3xl p-4 h-[calc(100vh-280px)] overflow-y-auto space-y-3 mb-3 border border-border/40"
-        style={wallpaperBg ? { background: wallpaperBg } : { background: "hsl(var(--glass-bg))" }}
-      >
+      {/* Messages — flex-1 scroll */}
+      <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-2.5">
         {messages.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-10">Say hi</p>
+          <p className="text-center text-sm text-muted-foreground py-10">Say hi 👋</p>
         ) : messages.map((m) => {
           const senderId = "user_id" in m ? m.user_id : m.sender_id;
           const mine = senderId === user?.id;
-          const prof = mode.kind === "room" ? (m as RoomMsg).profile : (mode.kind === "dm" ? (mine ? null : mode.peer) : null);
+          const prof = isRoom ? (m as RoomMsg).profile : (mine ? null : mode.peer);
           return (
-            <div key={m.id} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}>
-              {!mine && <Avatar url={prof?.avatar_url} name={prof?.display_name} size={32} />}
-              <div className={`max-w-[78%] rounded-2xl px-3 py-2 ${mine ? "bg-primary text-primary-foreground" : "glass-strong"}`}>
+            <div key={m.id} className={`flex gap-2 items-end ${mine ? "flex-row-reverse" : ""}`}>
+              {!mine && <Avatar url={prof?.avatar_url} name={prof?.display_name} size={28} />}
+              <div
+                className={`max-w-[78%] rounded-2xl px-3 py-2 backdrop-blur-xl border shadow-[var(--shadow-glass)] ${
+                  mine
+                    ? "bg-[hsl(var(--primary)/0.85)] text-primary-foreground border-[hsl(var(--primary)/0.5)] rounded-br-sm"
+                    : "bg-[hsl(var(--glass-strong-bg))] text-foreground border-[hsl(var(--glass-border))] rounded-bl-sm"
+                }`}
+              >
                 {!mine && (
                   <p className="text-[10px] font-semibold text-accent mb-0.5 truncate">
-                    {mode.kind === "room" ? ((m as RoomMsg).profile?.display_name ?? "User") : mode.peer.display_name}
+                    {isRoom ? ((m as RoomMsg).profile?.display_name ?? "User") : mode.peer.display_name}
                   </p>
                 )}
                 {m.media_url && <div className="mb-1">{renderMedia(m)}</div>}
                 {m.content && <p className="text-sm break-words whitespace-pre-wrap">{m.content}</p>}
                 {m.voice_url && <VoicePlayer url={m.voice_url} />}
+                <p className={`text-[9px] mt-1 ${mine ? "text-primary-foreground/70" : "text-muted-foreground"} text-right`}>
+                  {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </p>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Composer */}
-      <div className="flex gap-2 items-center">
-        {recording ? (
-          <div className="flex-1 flex items-center gap-3 glass-input rounded-full px-4 py-3">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-sm font-mono">{Math.floor(recSeconds/60)}:{String(recSeconds%60).padStart(2,"0")}</span>
-            <span className="text-xs text-muted-foreground ml-auto">Recording…</span>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center gap-1 glass-input rounded-full pl-2 pr-3">
-            <button onClick={() => photoInputRef.current?.click()} className="p-2 rounded-full hover:bg-white/5 text-primary" aria-label="Photo" disabled={uploading}>
-              <ImageIcon className="w-4 h-4" />
+      {/* Composer — sticks to top of keyboard via flex layout + dvh container */}
+      <div className="shrink-0 backdrop-blur-xl bg-background/80 border-t border-border/40 px-2 py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+        <div className="flex gap-2 items-center">
+          {recording ? (
+            <div className="flex-1 flex items-center gap-3 glass-input rounded-full px-4 py-3">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-sm font-mono">{Math.floor(recSeconds/60)}:{String(recSeconds%60).padStart(2,"0")}</span>
+              <span className="text-xs text-muted-foreground ml-auto">Recording…</span>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center gap-1 glass-input rounded-full pl-1.5 pr-3">
+              <button onClick={() => photoInputRef.current?.click()} className="p-2 rounded-full hover:bg-white/10 text-primary" aria-label="Photo" disabled={uploading}>
+                <ImageIcon className="w-4 h-4" />
+              </button>
+              <button onClick={() => videoInputRef.current?.click()} className="p-2 rounded-full hover:bg-white/10 text-primary" aria-label="Video" disabled={uploading}>
+                <Film className="w-4 h-4" />
+              </button>
+              <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+                placeholder={uploading ? "Uploading…" : "Message…"} maxLength={500} disabled={uploading}
+                className="flex-1 bg-transparent py-3 text-sm focus:outline-none" />
+            </div>
+          )}
+          {text.trim() && !recording ? (
+            <button onClick={send} className="p-3 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[var(--shadow-warm)]">
+              <Send className="w-4 h-4" />
             </button>
-            <button onClick={() => videoInputRef.current?.click()} className="p-2 rounded-full hover:bg-white/5 text-primary" aria-label="Video" disabled={uploading}>
-              <Film className="w-4 h-4" />
+          ) : (
+            <button onClick={recording ? stopRec : startRec}
+              className={`p-3 rounded-full ${recording ? "bg-red-500 text-white" : "bg-primary/20 text-primary"}`}>
+              {recording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
-            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder={uploading ? "Uploading…" : "Message…"} maxLength={500} disabled={uploading}
-              className="flex-1 bg-transparent py-3 text-sm focus:outline-none" />
-          </div>
-        )}
-        {text.trim() && !recording ? (
-          <button onClick={send} className="p-3 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[var(--shadow-warm)]">
-            <Send className="w-4 h-4" />
-          </button>
-        ) : (
-          <button onClick={recording ? stopRec : startRec}
-            className={`p-3 rounded-full ${recording ? "bg-red-500 text-white" : "bg-primary/20 text-primary"}`}>
-            {recording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
       <input ref={photoInputRef} type="file" accept="image/*" hidden
@@ -351,6 +367,6 @@ export default function Chat() {
         onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMedia(f, "video"); e.target.value = ""; }} />
 
       {themeOpen && <ThemeSettings onClose={() => setThemeOpen(false)} />}
-    </Layout>
+    </div>
   );
 }
