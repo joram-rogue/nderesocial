@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Heart, MessageCircle, Download, Trash2, Send, Reply, Repeat2, Bookmark, Share2, Eye, Smile } from "lucide-react";
 import { Watermark } from "./Watermark";
+import { NativeVideo } from "./NativeVideo";
 import { downloadFile, downloadImageWithWatermark, downloadText } from "@/lib/download";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -217,7 +218,9 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
           {post.media_url && (
             <div className="relative rounded-2xl overflow-hidden border border-border/40 mb-2">
               {post.media_kind === "video" ? (
-                <video src={post.media_url} controls className="w-full max-h-[520px] object-contain bg-black" />
+                <div className="w-full max-h-[520px] aspect-[9/16] sm:aspect-video bg-black">
+                  <NativeVideo src={post.media_url} autoPlayOnVisible={0.6} loop defaultMuted fit="contain" />
+                </div>
               ) : (
                 <img src={post.media_url} alt="" className="w-full max-h-[520px] object-contain bg-black" />
               )}
