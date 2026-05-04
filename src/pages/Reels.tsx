@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ExternalReel } from "@/components/ExternalReel";
+import { NativeVideo } from "@/components/NativeVideo";
 import { ReelActions } from "@/components/ReelActions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -328,20 +329,15 @@ export default function Reels() {
                 {visible ? (
                   <div className="relative w-full max-w-[460px] h-full flex items-center justify-center px-2 animate-fade-in">
                     {item.kind === "user" ? (
-                      <video
-                        data-user-reel
-                        src={item.video_url}
-                        className="w-full h-full object-contain bg-black"
-                        style={{ filter: item.filter_css ?? undefined }}
-                        playsInline
-                        loop
-                        muted={false}
-                        controls={false}
-                        onClick={(e) => {
-                          const v = e.currentTarget;
-                          v.paused ? v.play() : v.pause();
-                        }}
-                      />
+                      <div className="w-full h-full" style={{ filter: item.filter_css ?? undefined }}>
+                        <NativeVideo
+                          src={item.video_url}
+                          autoPlayOnVisible={0.6}
+                          loop
+                          defaultMuted
+                          fit="contain"
+                        />
+                      </div>
                     ) : (
                       <div className="w-full h-full">
                         <ExternalReel platform={item.platform} embed_url={item.embed_url} video_id={item.video_id} handle={item.author_handle} />
