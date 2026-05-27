@@ -74,13 +74,13 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
   const viewedRef = useRef(false);
 
   const loadAll = async () => {
-    const [{ count: lc }, likeMine, { count: rc }, repMine, bmMine, { count: vc }, cms] = await Promise.all([
+    const [{ count: lc }, likeMine, { count: rc }, repMine, bmMine, viewsRpc, cms] = await Promise.all([
       supabase.from("likes").select("*", { count: "exact", head: true }).eq("post_id", post.id),
       user ? supabase.from("likes").select("id").eq("post_id", post.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
       supabase.from("reposts").select("*", { count: "exact", head: true }).eq("post_id", post.id),
       user ? supabase.from("reposts").select("id").eq("post_id", post.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
       user ? supabase.from("bookmarks").select("id").eq("post_id", post.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
-      supabase.from("post_views").select("*", { count: "exact", head: true }).eq("post_id", post.id),
+      supabase.rpc("get_post_view_count", { p_post_id: post.id }),
       supabase.from("comments").select("*").eq("post_id", post.id).order("created_at", { ascending: true }),
     ]);
     setLikes(lc ?? 0);
@@ -88,7 +88,7 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
     setReposts(rc ?? 0);
     setReposted(!!(repMine as any)?.data);
     setBookmarked(!!(bmMine as any)?.data);
-    setViews(vc ?? 0);
+    setViews(Number((viewsRpc as any)?.data ?? 0));
     const cdata = (cms as any).data ?? [];
     if (cdata.length) {
       const ids = [...new Set(cdata.map((c: any) => c.user_id))];
