@@ -13,10 +13,11 @@ export const PostsGrid = ({ posts, onChange }: Props) => {
   useEffect(() => {
     if (posts.length === 0) return;
     (async () => {
-      const ids = posts.map((p) => p.id);
-      const { data } = await supabase.from("post_views").select("post_id").in("post_id", ids);
+      const results = await Promise.all(
+        posts.map((p) => supabase.rpc("get_post_view_count", { p_post_id: p.id }))
+      );
       const counts: Record<string, number> = {};
-      (data ?? []).forEach((r: any) => { counts[r.post_id] = (counts[r.post_id] ?? 0) + 1; });
+      posts.forEach((p, i) => { counts[p.id] = Number((results[i] as any)?.data ?? 0); });
       setViewCounts(counts);
     })();
   }, [posts.map((p) => p.id).join(",")]);
