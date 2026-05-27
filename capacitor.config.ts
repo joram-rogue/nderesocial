@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.50d2b1f0b38a4148969cbcc0979d5337',
+com.joram.nderesocial,
   appName: 'nderesocial',
   webDir: 'dist',
   server: {
