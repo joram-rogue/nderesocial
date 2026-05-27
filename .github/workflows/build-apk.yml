@@ -35,6 +35,7 @@ jobs:
         run: |
           npx cap add android
           npm install -g @capacitor/assets
+          mkdir -p assets
           cp public/icon-192.png assets/icon.png
           npx capacitor-assets generate
           npx cap sync android
