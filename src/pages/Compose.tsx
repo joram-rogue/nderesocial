@@ -9,6 +9,8 @@ import { Image as ImageIcon, Film, X, Send, Camera, ArrowLeft } from "lucide-rea
 import { toast } from "sonner";
 import { CameraCapture } from "@/components/CameraCapture";
 import { notifyFollowers } from "@/hooks/useNotifications";
+import { pickMedia } from "@/lib/mediaPicker";
+import { Capacitor } from "@capacitor/core";
 
 type Audience = "all" | "staff" | "troupe";
 
