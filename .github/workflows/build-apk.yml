@@ -32,7 +32,18 @@ jobs:
         run: npm install -g @capacitor/cli
 
       - name: Sync Capacitor
-        run: npx cap add android && npx cap sync android
+        run: |
+  npx cap add android
+  npm install -g sharp-cli
+  mkdir -p android/app/src/main/res/mipmap-hdpi
+  mkdir -p android/app/src/main/res/mipmap-xhdpi
+  mkdir -p android/app/src/main/res/mipmap-xxhdpi
+  mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+  sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-hdpi/ic_launcher.png resize 72 72
+  sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xhdpi/ic_launcher.png resize 96 96
+  sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png resize 144 144
+  sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png resize 192 192
+  npx cap sync android
 
       - name: Build APK
         run: |
