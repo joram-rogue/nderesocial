@@ -17,7 +17,9 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: |
+  npm install
+  npm install @capacitor/splash-screen
 
       - name: Build web app
         run: npm run build
