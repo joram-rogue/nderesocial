@@ -9,6 +9,8 @@ import { Image as ImageIcon, Film, X, Send, Camera, ArrowLeft } from "lucide-rea
 import { toast } from "sonner";
 import { CameraCapture } from "@/components/CameraCapture";
 import { notifyFollowers } from "@/hooks/useNotifications";
+import { pickMedia } from "@/lib/mediaPicker";
+import { Capacitor } from "@capacitor/core";
 
 type Audience = "all" | "staff" | "troupe";
 
@@ -136,7 +138,14 @@ export default function Compose() {
 
         <div className="glass-strong rounded-2xl p-3 flex items-center justify-between gap-2">
           <div className="flex gap-1">
-            <button onClick={() => pick("image/*")} className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl hover:bg-white/5 text-primary" aria-label="Photo from files">
+            <button
+              onClick={async () => {
+                // Native: action sheet (Camera / Gallery). Web: file input.
+                const f = await pickMedia({ source: "ask", video: false });
+                if (f) setMediaFile(f);
+              }}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl hover:bg-white/5 text-primary"
+              aria-label="Photo">
               <ImageIcon className="w-5 h-5" />
               <span className="text-[10px] uppercase tracking-wider">Photo</span>
             </button>
@@ -144,7 +153,17 @@ export default function Compose() {
               <Film className="w-5 h-5" />
               <span className="text-[10px] uppercase tracking-wider">Video</span>
             </button>
-            <button onClick={() => setCameraOpen(true)} className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl hover:bg-white/5 text-primary" aria-label="Camera">
+            <button
+              onClick={async () => {
+                if (Capacitor.isNativePlatform()) {
+                  const f = await pickMedia({ source: "camera", video: false });
+                  if (f) setMediaFile(f);
+                } else {
+                  setCameraOpen(true);
+                }
+              }}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl hover:bg-white/5 text-primary"
+              aria-label="Camera">
               <Camera className="w-5 h-5" />
               <span className="text-[10px] uppercase tracking-wider">Camera</span>
             </button>

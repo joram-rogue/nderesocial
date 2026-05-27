@@ -100,6 +100,18 @@ export const PostCard = ({ post, onChange }: { post: Post; onChange: () => void 
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [post.id, user?.id]);
 
+  // Realtime: keep comments / likes / reposts in sync across users
+  useEffect(() => {
+    const ch = supabase
+      .channel(`post:${post.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${post.id}` }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "likes", filter: `post_id=eq.${post.id}` }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "reposts", filter: `post_id=eq.${post.id}` }, () => loadAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line
+  }, [post.id]);
+
   // Mark a view once per session per user
   useEffect(() => {
     if (!user || viewedRef.current) return;
