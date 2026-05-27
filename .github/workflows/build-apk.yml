@@ -31,28 +31,43 @@ jobs:
       - name: Install Capacitor CLI
         run: npm install -g @capacitor/cli
 
-      - name: Sync Capacitor
+      - name: Add and sync Android
         run: |
-  npx cap add android
-  npm install -g sharp-cli
-  mkdir -p android/app/src/main/res/mipmap-hdpi
-  mkdir -p android/app/src/main/res/mipmap-xhdpi
-  mkdir -p android/app/src/main/res/mipmap-xxhdpi
-  mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-  sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-hdpi/ic_launcher.png resize 72 72
-  sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xhdpi/ic_launcher.png resize 96 96
-  sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png resize 144 144
-  sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png resize 192 192
-  npx cap sync android
+          npx cap add android
+          npm install -g sharp-cli
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-hdpi/ic_launcher.png resize 72 72
+          sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xhdpi/ic_launcher.png resize 96 96
+          sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png resize 144 144
+          sharp -i public/icon-192.png -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png resize 192 192
+          npx cap sync android
 
-      - name: Build APK
+      - name: Generate Keystore
+        run: |
+          keytool -genkey -v -keystore keystore.jks \
+          -alias ndere \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -storepass ndere123 \
+          -keypass ndere123 \
+          -dname "CN=Joram, OU=Dev, O=NdereSocial, L=Kampala, S=Uganda, C=UG"
+
+      - name: Build Release APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/keystore.jks \
+            -Pandroid.injected.signing.store.password=ndere123 \
+            -Pandroid.injected.signing.key.alias=ndere \
+            -Pandroid.injected.signing.key.password=ndere123
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ndere-social-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
