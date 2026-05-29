@@ -54,7 +54,40 @@ export default function Live() {
   const startBroadcast = async () => {
     if (!user) { toast.error("Sign in"); return; }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+      // Native (Capacitor): explicitly request camera + microphone permissions first.
+      const { Capacitor } = await import("@capacitor/core");
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { Camera } = await import("@capacitor/camera");
+          const camPerm = await Camera.checkPermissions();
+          if (camPerm.camera !== "granted") {
+            const req = await Camera.requestPermissions({ permissions: ["camera"] });
+            if (req.camera !== "granted") {
+              toast.error("Camera is off. Open phone Settings → Apps → Ndere → Permissions and turn on Camera.");
+              return;
+            }
+          }
+        } catch {/* plugin missing — fall through to getUserMedia */}
+      }
+
+      // getUserMedia triggers the native microphone prompt on Android via WebView.
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+      } catch (err: any) {
+        const name = err?.name || "";
+        if (name === "NotAllowedError" || name === "SecurityError" || /denied|permission/i.test(err?.message || "")) {
+          toast.error("Camera or microphone is blocked. Enable both in your phone Settings → Apps → Ndere → Permissions.");
+        } else if (name === "NotFoundError") {
+          toast.error("No camera or microphone found on this device.");
+        } else if (name === "NotReadableError") {
+          toast.error("Camera or mic is being used by another app. Close it and try again.");
+        } else {
+          toast.error(err?.message || "Couldn't start the live stream.");
+        }
+        return;
+      }
+
       localStreamRef.current = stream;
       if (localRef.current) localRef.current.srcObject = stream;
       const id = crypto.randomUUID();
@@ -100,9 +133,10 @@ export default function Live() {
       await channel.subscribe();
       toast.success("You're live!");
     } catch (e: any) {
-      toast.error(e.message || "Couldn't access camera");
+      toast.error(e.message || "Couldn't start live stream");
     }
   };
+
 
   const stopBroadcast = () => {
     channelRef.current?.send({ type: "broadcast", event: "ended", payload: {} });

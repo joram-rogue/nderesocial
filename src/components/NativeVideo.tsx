@@ -113,10 +113,17 @@ export const NativeVideo = ({
     e.stopPropagation();
     const v = videoRef.current;
     if (!v) return;
+    const wasMuted = v.muted;
     v.muted = !v.muted;
     setMuted(v.muted);
+    // When user turns sound on, auto-play audio (resume if paused).
+    if (wasMuted && !v.muted) {
+      v.volume = 1;
+      v.play().catch(() => {});
+    }
     bumpControls();
   };
+
 
   const goFullscreen = (e: React.MouseEvent) => {
     e.stopPropagation();

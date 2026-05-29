@@ -2,25 +2,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ExternalReel } from "@/components/ExternalReel";
 import { NativeVideo } from "@/components/NativeVideo";
 import { ReelActions } from "@/components/ReelActions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { parseAnyVideoLink } from "@/lib/anyLink";
 import { CameraCapture } from "@/components/CameraCapture";
 import { LogoLoader } from "@/components/LogoLoader";
 import { MediaEditor, EditorResult } from "@/components/MediaEditor";
 import {
-  Shuffle, Trash2, Sparkles, Link2, X, Loader2,
+  Shuffle, Trash2, Sparkles, X, Loader2,
   Home, Film, MessageCircle, User, LogOut, Video, Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/ndere-logo.png";
 
+
 type FeedItem =
-  | { kind: "external"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string; platform: string; embed_url: string | null; expires_at: string | null }
-  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null; expires_at: string | null };
+  { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null; expires_at: string | null };
+
 
 const expiryLabel = (iso: string) => {
   const ms = new Date(iso).getTime() - Date.now();
@@ -37,9 +36,8 @@ export default function Reels() {
   const isAdmin = role === "admin";
 
   const [items, setItems] = useState<FeedItem[]>([]);
+
   const [shuffle, setShuffle] = useState(0);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [bulk, setBulk] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -51,21 +49,11 @@ export default function Reels() {
 
   const load = async () => {
     const nowIso = new Date().toISOString();
-    const [tt, ur] = await Promise.all([
-      supabase.from("tiktok_reels")
-        .select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url,expires_at")
-        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-        .order("created_at", { ascending: false }),
-      supabase.from("user_reels")
-        .select("id,video_url,caption,user_id,filter_css,expires_at")
-        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-        .order("created_at", { ascending: false }),
-    ]);
-    const merged: FeedItem[] = [
-      ...(ur.data ?? []).map((r) => ({ kind: "user" as const, ...r })),
-      ...(tt.data ?? []).map((r: any) => ({ kind: "external" as const, ...r })),
-    ];
-    setItems(merged);
+    const { data } = await supabase.from("user_reels")
+      .select("id,video_url,caption,user_id,filter_css,expires_at")
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order("created_at", { ascending: false });
+    setItems((data ?? []).map((r) => ({ kind: "user" as const, ...r })));
   };
   useEffect(() => { load(); }, []);
 
@@ -101,40 +89,6 @@ export default function Reels() {
     slideRefs.current.forEach((el) => el && obs.observe(el));
     return () => obs.disconnect();
   }, [shuffled]);
-
-  // Everyone: paste any video link (TikTok, YouTube, Instagram, mp4, etc.)
-  const addMany = async () => {
-    if (!user) { toast.error("Sign in"); return; }
-    const tokens = bulk.split(/[\s,\n]+/).map((t) => t.trim()).filter(Boolean);
-    if (tokens.length === 0) { toast.error("Paste a link"); return; }
-    setBusy(true);
-    const rows: any[] = [];
-    const skipped: string[] = [];
-    for (const t of tokens) {
-      const p = parseAnyVideoLink(t);
-      if (!p) { skipped.push(t); continue; }
-      rows.push({
-        tiktok_url: t,
-        video_id: p.video_id,
-        author_handle: p.author_handle,
-        added_by: user.id,
-        platform: p.platform,
-        embed_url: p.embed_url,
-      });
-    }
-    if (rows.length === 0) {
-      setBusy(false);
-      toast.error("Couldn't read those links.");
-      return;
-    }
-    const { error } = await supabase.from("tiktok_reels").insert(rows);
-    setBusy(false);
-    if (error) { toast.error(`Couldn't add: ${error.message}`); return; }
-    setBulk("");
-    setComposerOpen(false);
-    toast.success(`Added ${rows.length}${skipped.length ? ` · skipped ${skipped.length}` : ""} · expires in 30 min`);
-    load();
-  };
 
   // Everyone: record → edit → caption → post
   const onCapture = (file: File) => {
@@ -176,19 +130,18 @@ export default function Reels() {
       setBusy(false);
     }
   };
-
   const remove = async (item: FeedItem) => {
     if (!confirm("Remove this reel?")) return;
-    const table = item.kind === "external" ? "tiktok_reels" : "user_reels";
-    const { error } = await supabase.from(table).delete().eq("id", item.id);
+    const { error } = await supabase.from("user_reels").delete().eq("id", item.id);
     if (error) { toast.error(error.message); return; }
     load();
   };
 
   const canDelete = (item: FeedItem) => {
     if (isAdmin) return true;
-    return item.kind === "external" ? item.added_by === user?.id : item.user_id === user?.id;
+    return item.user_id === user?.id;
   };
+
 
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
@@ -208,14 +161,6 @@ export default function Reels() {
             >
               <Shuffle className="w-4 h-4" />
             </button>
-            {/* Everyone: paste any video link */}
-            <button
-              onClick={() => setComposerOpen((s) => !s)}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
-              aria-label="Paste link"
-            >
-              {composerOpen ? <X className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
-            </button>
             <button
               onClick={() => navigate("/live")}
               className="p-2 rounded-full bg-destructive/20 backdrop-blur-md hover:bg-destructive/30 text-destructive"
@@ -223,6 +168,7 @@ export default function Reels() {
             >
               <Radio className="w-4 h-4" />
             </button>
+
             {user && (
               <button
                 onClick={async () => { await signOut(); navigate("/auth"); }}
@@ -247,24 +193,8 @@ export default function Reels() {
         </button>
       )}
 
-      {/* Link composer overlay — open to all */}
-      {composerOpen && (
-        <div className="absolute inset-0 z-40 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setComposerOpen(false)}>
-          <div className="w-full sm:max-w-md bg-card text-foreground rounded-t-3xl sm:rounded-3xl p-5 space-y-3 animate-fade-in border border-white/10" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Link2 className="w-4 h-4 text-primary" /> Add a video link
-            </div>
-            <p className="text-xs text-muted-foreground">TikTok, YouTube, Instagram, Vimeo, mp4 — one per line.</p>
-            <Textarea className="glass-input min-h-[110px] font-mono text-xs" placeholder="https://…" value={bulk} onChange={(e) => setBulk(e.target.value)} />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => { setComposerOpen(false); setBulk(""); }} className="rounded-xl">Cancel</Button>
-              <Button onClick={addMany} disabled={busy || !bulk.trim()} className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl gap-2">
-                {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding…</> : "Add"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+
+
 
       {/* Camera overlay */}
       {cameraOpen && <CameraCapture onCapture={onCapture} onClose={() => setCameraOpen(false)} />}
@@ -328,41 +258,24 @@ export default function Reels() {
               >
                 {visible ? (
                   <div className="relative w-full max-w-[460px] h-full flex items-center justify-center px-2 animate-fade-in">
-                    {item.kind === "user" ? (
-                      <div className="w-full h-full" style={{ filter: item.filter_css ?? undefined }}>
-                        <NativeVideo
-                          src={item.video_url}
-                          autoPlayOnVisible={0.6}
-                          loop
-                          defaultMuted
-                          fit="contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-full h-full">
-                        <ExternalReel platform={item.platform} embed_url={item.embed_url} video_id={item.video_id} handle={item.author_handle} />
-                      </div>
-                    )}
+                    <div className="w-full h-full" style={{ filter: item.filter_css ?? undefined }}>
+                      <NativeVideo
+                        src={item.video_url}
+                        autoPlayOnVisible={0.6}
+                        loop
+                        defaultMuted
+                        fit="contain"
+                      />
+                    </div>
 
                     {/* Right action rail */}
                     <div className="absolute right-3 bottom-28 flex flex-col items-center gap-4 z-10">
                       <ReelActions
                         reelId={item.id}
                         reelKind={item.kind}
-                        shareUrl={item.kind === "external" ? item.tiktok_url : `${window.location.origin}/reels`}
-                        shareTitle={item.kind === "user" ? item.caption ?? "Ndere Reel" : `@${item.author_handle ?? item.platform}`}
+                        shareUrl={`${window.location.origin}/reels`}
+                        shareTitle={item.caption ?? "Ndere Reel"}
                       />
-                      {item.kind === "external" && (
-                        <a
-                          href={item.tiktok_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
-                          aria-label="Open original"
-                        >
-                          <Film className="w-5 h-5" />
-                        </a>
-                      )}
                       {canDelete(item) && (
                         <button
                           onClick={() => remove(item)}
@@ -376,14 +289,11 @@ export default function Reels() {
 
                     {/* Bottom caption */}
                     <div className="absolute left-4 right-20 bottom-28 z-10 pointer-events-none">
-                      <div className="text-sm font-semibold drop-shadow-lg">
-                        {item.kind === "external"
-                          ? `@${item.author_handle ?? item.platform}`
-                          : "Ndere FAM"}
-                      </div>
-                      {item.kind === "user" && item.caption && (
+                      <div className="text-sm font-semibold drop-shadow-lg">Ndere FAM</div>
+                      {item.caption && (
                         <div className="text-[12px] text-white/85 drop-shadow line-clamp-2 mt-0.5">{item.caption}</div>
                       )}
+
                       {item.expires_at && (
                         <div className="mt-1.5 inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/20 text-accent backdrop-blur-md pointer-events-auto">
                           {expiryLabel(item.expires_at)}
