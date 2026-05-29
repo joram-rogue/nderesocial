@@ -161,14 +161,6 @@ export default function Reels() {
             >
               <Shuffle className="w-4 h-4" />
             </button>
-            {/* Everyone: paste any video link */}
-            <button
-              onClick={() => setComposerOpen((s) => !s)}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
-              aria-label="Paste link"
-            >
-              {composerOpen ? <X className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
-            </button>
             <button
               onClick={() => navigate("/live")}
               className="p-2 rounded-full bg-destructive/20 backdrop-blur-md hover:bg-destructive/30 text-destructive"
@@ -176,6 +168,7 @@ export default function Reels() {
             >
               <Radio className="w-4 h-4" />
             </button>
+
             {user && (
               <button
                 onClick={async () => { await signOut(); navigate("/auth"); }}
