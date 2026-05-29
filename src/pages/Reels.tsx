@@ -2,21 +2,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ExternalReel } from "@/components/ExternalReel";
 import { NativeVideo } from "@/components/NativeVideo";
 import { ReelActions } from "@/components/ReelActions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { parseAnyVideoLink } from "@/lib/anyLink";
 import { CameraCapture } from "@/components/CameraCapture";
 import { LogoLoader } from "@/components/LogoLoader";
 import { MediaEditor, EditorResult } from "@/components/MediaEditor";
 import {
-  Shuffle, Trash2, Sparkles, Link2, X, Loader2,
+  Shuffle, Trash2, Sparkles, X, Loader2,
   Home, Film, MessageCircle, User, LogOut, Video, Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/ndere-logo.png";
+
 
 type FeedItem =
   | { kind: "external"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string; platform: string; embed_url: string | null; expires_at: string | null }
