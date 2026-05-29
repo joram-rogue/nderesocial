@@ -130,19 +130,18 @@ export default function Reels() {
       setBusy(false);
     }
   };
-
   const remove = async (item: FeedItem) => {
     if (!confirm("Remove this reel?")) return;
-    const table = item.kind === "external" ? "tiktok_reels" : "user_reels";
-    const { error } = await supabase.from(table).delete().eq("id", item.id);
+    const { error } = await supabase.from("user_reels").delete().eq("id", item.id);
     if (error) { toast.error(error.message); return; }
     load();
   };
 
   const canDelete = (item: FeedItem) => {
     if (isAdmin) return true;
-    return item.kind === "external" ? item.added_by === user?.id : item.user_id === user?.id;
+    return item.user_id === user?.id;
   };
+
 
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
