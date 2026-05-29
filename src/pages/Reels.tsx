@@ -18,8 +18,8 @@ import logo from "@/assets/ndere-logo.png";
 
 
 type FeedItem =
-  | { kind: "external"; id: string; tiktok_url: string; video_id: string; author_handle: string | null; added_by: string; platform: string; embed_url: string | null; expires_at: string | null }
-  | { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null; expires_at: string | null };
+  { kind: "user"; id: string; video_url: string; caption: string | null; user_id: string; filter_css: string | null; expires_at: string | null };
+
 
 const expiryLabel = (iso: string) => {
   const ms = new Date(iso).getTime() - Date.now();
