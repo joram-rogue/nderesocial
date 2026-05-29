@@ -36,7 +36,7 @@ export default function Reels() {
   const isAdmin = role === "admin";
 
   const [items, setItems] = useState<FeedItem[]>([]);
-  const [items, setItems] = useState<FeedItem[]>([]);
+
   const [shuffle, setShuffle] = useState(0);
   const [busy, setBusy] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
