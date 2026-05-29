@@ -193,24 +193,8 @@ export default function Reels() {
         </button>
       )}
 
-      {/* Link composer overlay — open to all */}
-      {composerOpen && (
-        <div className="absolute inset-0 z-40 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setComposerOpen(false)}>
-          <div className="w-full sm:max-w-md bg-card text-foreground rounded-t-3xl sm:rounded-3xl p-5 space-y-3 animate-fade-in border border-white/10" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Link2 className="w-4 h-4 text-primary" /> Add a video link
-            </div>
-            <p className="text-xs text-muted-foreground">TikTok, YouTube, Instagram, Vimeo, mp4 — one per line.</p>
-            <Textarea className="glass-input min-h-[110px] font-mono text-xs" placeholder="https://…" value={bulk} onChange={(e) => setBulk(e.target.value)} />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => { setComposerOpen(false); setBulk(""); }} className="rounded-xl">Cancel</Button>
-              <Button onClick={addMany} disabled={busy || !bulk.trim()} className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl gap-2">
-                {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding…</> : "Add"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+
+
 
       {/* Camera overlay */}
       {cameraOpen && <CameraCapture onCapture={onCapture} onClose={() => setCameraOpen(false)} />}
