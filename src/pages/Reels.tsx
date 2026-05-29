@@ -258,41 +258,24 @@ export default function Reels() {
               >
                 {visible ? (
                   <div className="relative w-full max-w-[460px] h-full flex items-center justify-center px-2 animate-fade-in">
-                    {item.kind === "user" ? (
-                      <div className="w-full h-full" style={{ filter: item.filter_css ?? undefined }}>
-                        <NativeVideo
-                          src={item.video_url}
-                          autoPlayOnVisible={0.6}
-                          loop
-                          defaultMuted
-                          fit="contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-full h-full">
-                        <ExternalReel platform={item.platform} embed_url={item.embed_url} video_id={item.video_id} handle={item.author_handle} />
-                      </div>
-                    )}
+                    <div className="w-full h-full" style={{ filter: item.filter_css ?? undefined }}>
+                      <NativeVideo
+                        src={item.video_url}
+                        autoPlayOnVisible={0.6}
+                        loop
+                        defaultMuted
+                        fit="contain"
+                      />
+                    </div>
 
                     {/* Right action rail */}
                     <div className="absolute right-3 bottom-28 flex flex-col items-center gap-4 z-10">
                       <ReelActions
                         reelId={item.id}
                         reelKind={item.kind}
-                        shareUrl={item.kind === "external" ? item.tiktok_url : `${window.location.origin}/reels`}
-                        shareTitle={item.kind === "user" ? item.caption ?? "Ndere Reel" : `@${item.author_handle ?? item.platform}`}
+                        shareUrl={`${window.location.origin}/reels`}
+                        shareTitle={item.caption ?? "Ndere Reel"}
                       />
-                      {item.kind === "external" && (
-                        <a
-                          href={item.tiktok_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
-                          aria-label="Open original"
-                        >
-                          <Film className="w-5 h-5" />
-                        </a>
-                      )}
                       {canDelete(item) && (
                         <button
                           onClick={() => remove(item)}
@@ -306,14 +289,11 @@ export default function Reels() {
 
                     {/* Bottom caption */}
                     <div className="absolute left-4 right-20 bottom-28 z-10 pointer-events-none">
-                      <div className="text-sm font-semibold drop-shadow-lg">
-                        {item.kind === "external"
-                          ? `@${item.author_handle ?? item.platform}`
-                          : "Ndere FAM"}
-                      </div>
-                      {item.kind === "user" && item.caption && (
+                      <div className="text-sm font-semibold drop-shadow-lg">Ndere FAM</div>
+                      {item.caption && (
                         <div className="text-[12px] text-white/85 drop-shadow line-clamp-2 mt-0.5">{item.caption}</div>
                       )}
+
                       {item.expires_at && (
                         <div className="mt-1.5 inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/20 text-accent backdrop-blur-md pointer-events-auto">
                           {expiryLabel(item.expires_at)}
