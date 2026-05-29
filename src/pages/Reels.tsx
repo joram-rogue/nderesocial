@@ -36,9 +36,8 @@ export default function Reels() {
   const isAdmin = role === "admin";
 
   const [items, setItems] = useState<FeedItem[]>([]);
+  const [items, setItems] = useState<FeedItem[]>([]);
   const [shuffle, setShuffle] = useState(0);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [bulk, setBulk] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -50,21 +49,11 @@ export default function Reels() {
 
   const load = async () => {
     const nowIso = new Date().toISOString();
-    const [tt, ur] = await Promise.all([
-      supabase.from("tiktok_reels")
-        .select("id,tiktok_url,video_id,author_handle,added_by,platform,embed_url,expires_at")
-        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-        .order("created_at", { ascending: false }),
-      supabase.from("user_reels")
-        .select("id,video_url,caption,user_id,filter_css,expires_at")
-        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-        .order("created_at", { ascending: false }),
-    ]);
-    const merged: FeedItem[] = [
-      ...(ur.data ?? []).map((r) => ({ kind: "user" as const, ...r })),
-      ...(tt.data ?? []).map((r: any) => ({ kind: "external" as const, ...r })),
-    ];
-    setItems(merged);
+    const { data } = await supabase.from("user_reels")
+      .select("id,video_url,caption,user_id,filter_css,expires_at")
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order("created_at", { ascending: false });
+    setItems((data ?? []).map((r) => ({ kind: "user" as const, ...r })));
   };
   useEffect(() => { load(); }, []);
 
@@ -100,40 +89,6 @@ export default function Reels() {
     slideRefs.current.forEach((el) => el && obs.observe(el));
     return () => obs.disconnect();
   }, [shuffled]);
-
-  // Everyone: paste any video link (TikTok, YouTube, Instagram, mp4, etc.)
-  const addMany = async () => {
-    if (!user) { toast.error("Sign in"); return; }
-    const tokens = bulk.split(/[\s,\n]+/).map((t) => t.trim()).filter(Boolean);
-    if (tokens.length === 0) { toast.error("Paste a link"); return; }
-    setBusy(true);
-    const rows: any[] = [];
-    const skipped: string[] = [];
-    for (const t of tokens) {
-      const p = parseAnyVideoLink(t);
-      if (!p) { skipped.push(t); continue; }
-      rows.push({
-        tiktok_url: t,
-        video_id: p.video_id,
-        author_handle: p.author_handle,
-        added_by: user.id,
-        platform: p.platform,
-        embed_url: p.embed_url,
-      });
-    }
-    if (rows.length === 0) {
-      setBusy(false);
-      toast.error("Couldn't read those links.");
-      return;
-    }
-    const { error } = await supabase.from("tiktok_reels").insert(rows);
-    setBusy(false);
-    if (error) { toast.error(`Couldn't add: ${error.message}`); return; }
-    setBulk("");
-    setComposerOpen(false);
-    toast.success(`Added ${rows.length}${skipped.length ? ` · skipped ${skipped.length}` : ""} · expires in 30 min`);
-    load();
-  };
 
   // Everyone: record → edit → caption → post
   const onCapture = (file: File) => {
