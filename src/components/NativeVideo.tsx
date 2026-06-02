@@ -88,6 +88,34 @@ export const NativeVideo = ({
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
+  // Unmute when user taps a hardware volume button (Android WebView dispatches
+  // these as keyup events) OR when any other player broadcasts an unmute.
+  useEffect(() => {
+    const unmute = () => {
+      const v = videoRef.current;
+      if (!v) return;
+      if (v.muted) {
+        v.muted = false;
+        v.volume = 1;
+        setMuted(false);
+        v.play().catch(() => {});
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      const k = (e.key || "") + " " + (e.code || "");
+      if (/VolumeUp|AudioVolumeUp|VolumeDown|AudioVolumeDown/i.test(k)) {
+        unmute();
+        window.dispatchEvent(new CustomEvent("ndere:unmute-all"));
+      }
+    };
+    window.addEventListener("keyup", onKey);
+    window.addEventListener("ndere:unmute-all", unmute as EventListener);
+    return () => {
+      window.removeEventListener("keyup", onKey);
+      window.removeEventListener("ndere:unmute-all", unmute as EventListener);
+    };
+  }, []);
+
   const toggle = () => {
     const v = videoRef.current;
     if (!v) return;
