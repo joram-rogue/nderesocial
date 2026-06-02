@@ -35,11 +35,8 @@ jobs:
 
       - name: Add and sync Android
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          else
-            echo "android/ already exists, skipping cap add"
-          fi
+          rm -rf android
+          npx cap add android
           npm install -g @capacitor/assets
           mkdir -p assets
           cp public/icon-192.png assets/icon.png
