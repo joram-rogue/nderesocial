@@ -11,6 +11,7 @@ const labelFor = (type: string, name: string) => {
     case "like": return `${name} liked your post`;
     case "comment": return `${name} commented on your post`;
     case "post": return `${name} shared a new post`;
+    case "setup": return `Finish setting up your profile to get the full Ndere experience`;
     default: return `${name} sent you an update`;
   }
 };
@@ -62,4 +63,16 @@ export const notifyFollowers = async (actor_id: string, type: "post", post_id?: 
   if (!data?.length) return;
   const rows = data.map((r) => ({ user_id: r.follower_id, actor_id, type, post_id: post_id ?? null }));
   await supabase.from("notifications").insert(rows);
+};
+
+/** Notify every user on the platform (excluding the actor) about a new post. */
+export const notifyAllUsers = async (actor_id: string, type: "post", post_id?: string) => {
+  const { data } = await supabase.from("profiles").select("id").neq("id", actor_id);
+  if (!data?.length) return;
+  const rows = data.map((r) => ({ user_id: r.id, actor_id, type, post_id: post_id ?? null }));
+  // Chunk to keep request size reasonable
+  const chunk = 500;
+  for (let i = 0; i < rows.length; i += chunk) {
+    await supabase.from("notifications").insert(rows.slice(i, i + chunk));
+  }
 };

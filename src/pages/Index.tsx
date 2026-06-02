@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Layout } from "@/components/Layout";
 import { PostCard, type Post } from "@/components/PostCard";
+import { ProfileSetupBanner } from "@/components/ProfileSetupBanner";
 import { fetchPostsWithProfiles } from "@/lib/posts";
 
 export default function Index() {
@@ -24,6 +25,7 @@ export default function Index() {
 
   return (
     <Layout>
+      <ProfileSetupBanner />
       <div className="-mx-4">
         {busy && posts.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground text-sm">Loading…</div>

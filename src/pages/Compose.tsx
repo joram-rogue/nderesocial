@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon, Film, X, Send, Camera, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { CameraCapture } from "@/components/CameraCapture";
-import { notifyFollowers } from "@/hooks/useNotifications";
+import { notifyAllUsers } from "@/hooks/useNotifications";
+import { NativeVideo } from "@/components/NativeVideo";
 import { pickMedia } from "@/lib/mediaPicker";
 import { Capacitor } from "@capacitor/core";
 
@@ -79,7 +80,7 @@ export default function Compose() {
       }).select("id").maybeSingle();
       if (error) throw error;
       if (inserted?.id && audience === "all") {
-        notifyFollowers(user.id, "post", inserted.id).catch(() => {});
+        notifyAllUsers(user.id, "post", inserted.id).catch(() => {});
       }
       toast.success(isVideo ? "Posted — auto-deletes in 3 days" : "Posted");
       navigate("/");
@@ -119,7 +120,9 @@ export default function Compose() {
         {preview && (
           <div className="relative rounded-2xl overflow-hidden border border-white/10">
             {file?.type.startsWith("video") ? (
-              <video src={preview} className="w-full max-h-96 object-cover" controls />
+              <div className="w-full h-96 bg-black">
+                <NativeVideo src={preview} autoPlayOnVisible={0} loop defaultMuted fit="cover" />
+              </div>
             ) : (
               <img src={preview} alt="" className="w-full max-h-96 object-cover" />
             )}

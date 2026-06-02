@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon, Film, X, Send, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { CameraCapture } from "./CameraCapture";
+import { NativeVideo } from "./NativeVideo";
+import { notifyAllUsers } from "@/hooks/useNotifications";
 
 type Audience = "all" | "staff" | "troupe";
 
@@ -69,10 +71,13 @@ export const PostComposer = ({ onPosted }: { onPosted: () => void }) => {
         if (upErr) throw upErr;
         media_url = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
       }
-      const { error } = await supabase.from("posts").insert({
+      const { data: inserted, error } = await supabase.from("posts").insert({
         user_id: user.id, content: content.trim() || null, media_url, media_kind, audience,
-      });
+      }).select("id").maybeSingle();
       if (error) throw error;
+      if (inserted?.id && audience === "all") {
+        notifyAllUsers(user.id, "post", inserted.id).catch(() => {});
+      }
       setContent(""); clearMedia(); setAudience("all");
       toast.success(isVideo ? "Posted — auto-deletes in 30 min" : "Posted");
       onPosted();
@@ -94,7 +99,9 @@ export const PostComposer = ({ onPosted }: { onPosted: () => void }) => {
         {preview && (
           <div className="relative rounded-2xl overflow-hidden border border-white/10">
             {file?.type.startsWith("video") ? (
-              <video src={preview} className="w-full max-h-80 object-cover" controls />
+              <div className="w-full h-80 bg-black">
+                <NativeVideo src={preview} autoPlayOnVisible={0} loop defaultMuted fit="cover" />
+              </div>
             ) : (
               <img src={preview} alt="" className="w-full max-h-80 object-cover" />
             )}
